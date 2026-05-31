@@ -17,7 +17,7 @@ import { ExamFormDialog }     from "@/components/dashboard/exam-form-dialog";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 
 export default function ExamsPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const canEdit   = ["ADMIN", "LAB_TECH"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";
 

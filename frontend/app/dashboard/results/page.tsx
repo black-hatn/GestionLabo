@@ -276,7 +276,7 @@ type ModalState =
   | { type: "delete"; result: ResultItem };
 
 export default function ResultsPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const canEdit   = ["ADMIN", "LAB_TECH"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";
 

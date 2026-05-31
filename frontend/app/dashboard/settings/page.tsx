@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/lib/toast-store";
 import { useAuthStore } from "@/lib/auth-store";
+import { UserRole } from "@/lib/permissions";
 import userService from "@/services/api/user";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
@@ -22,7 +23,8 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function SettingsPage() {
-  const { user: currentUser, login } = useAuthStore();
+  const currentUser = useAuthStore(state => state.user);
+  const login       = useAuthStore(state => state.login);
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications">("profile");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
@@ -100,7 +102,7 @@ export default function SettingsPage() {
       // Refresh stored user data
       const token = localStorage.getItem("access_token") ?? "";
       const refreshToken = localStorage.getItem("refresh_token") ?? "";
-      login(token, updated);
+      login(token, { ...updated, role: (updated.role as UserRole) });
       toast.success("Profil mis à jour avec succès !");
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.message || "Erreur lors de la mise à jour";

@@ -5,7 +5,7 @@ import axios from 'axios'
 export function useApi() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { accessToken } = useAuthStore()
+  const accessToken = useAuthStore(state => state.accessToken)
 
   const request = useCallback(
     async (method: string, url: string, data?: any) => {

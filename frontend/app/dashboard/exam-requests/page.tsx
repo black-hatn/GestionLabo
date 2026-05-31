@@ -235,7 +235,7 @@ type ModalState =
   | { type: "delete"; er: ExamRequest };
 
 export default function ExamRequestsPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const role = user?.role ?? "";
   const canCreate = ["ADMIN", "RECEPTIONIST"].includes(role);
   const canDelete = role === "ADMIN";

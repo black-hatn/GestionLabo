@@ -1,65 +1,96 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
 import {
   LayoutDashboard, Users, Activity, ClipboardList, FileSpreadsheet,
   Receipt, FileText, Settings, ShieldCheck, Shield,
-  ChevronLeft, ChevronRight, Microscope, Zap,
+  ChevronLeft, ChevronRight, Microscope, Zap, LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
+import { useToastStore } from "@/lib/toast-store";
+import { UserRole } from "@/lib/permissions";
 
-const NAV_ITEMS = [
-  { label: "Tableau de Bord",       href: "/dashboard",              icon: LayoutDashboard, roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
-  { label: "Patients",               href: "/dashboard/patients",     icon: Users,           roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
-  { label: "Catalogue Analyses",     href: "/dashboard/exams",        icon: Microscope,      roles: ["ADMIN","LAB_TECH","DOCTOR"] },
-  { label: "Demandes d'Examens",    href: "/dashboard/exam-requests", icon: ClipboardList,   roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
-  { label: "Résultats Biologiques", href: "/dashboard/results",       icon: FileSpreadsheet, roles: ["ADMIN","LAB_TECH","DOCTOR"] },
-  { label: "Facturation",            href: "/dashboard/invoices",     icon: Receipt,         roles: ["ADMIN","RECEPTIONIST"] },
-  { label: "Paiements",              href: "/dashboard/payments",     icon: FileText,        roles: ["ADMIN"] },
+/* ─ Navigation config — pilotée par les rôles ─────────────────────── */
+const NAV_ITEMS: {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+  roles: UserRole[];
+}[] = [
+  { label: "Tableau de Bord",      href: "/dashboard",              icon: LayoutDashboard, roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Patients",              href: "/dashboard/patients",     icon: Users,           roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Catalogue Analyses",    href: "/dashboard/exams",        icon: Microscope,      roles: ["ADMIN","LAB_TECH","DOCTOR"] },
+  { label: "Demandes d'Examens",   href: "/dashboard/exam-requests", icon: ClipboardList,   roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Résultats Biologiques",href: "/dashboard/results",       icon: FileSpreadsheet, roles: ["ADMIN","LAB_TECH","DOCTOR"] },
+  { label: "Facturation",           href: "/dashboard/invoices",     icon: Receipt,         roles: ["ADMIN","RECEPTIONIST"] },
+  { label: "Paiements",             href: "/dashboard/payments",     icon: FileText,        roles: ["ADMIN"] },
 ];
 
 const ADMIN_ITEMS = [
-  { label: "Panneau Admin",         href: "/dashboard/admin",        icon: Shield },
-  { label: "Gestion Utilisateurs",  href: "/dashboard/users",        icon: ShieldCheck },
+  { label: "Panneau Admin",        href: "/dashboard/admin",  icon: Shield },
+  { label: "Gestion Utilisateurs", href: "/dashboard/users",  icon: ShieldCheck },
 ];
 
 const BOTTOM_ITEMS = [
-  { label: "Paramètres",            href: "/dashboard/settings",     icon: Settings },
+  { label: "Paramètres", href: "/dashboard/settings", icon: Settings },
 ];
 
+/* ─ Sidebar Component ──────────────────────────────────────────────── */
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const router   = useRouter();
+  const { user, logout } = { user: useAuthStore(state => state.user), logout: useAuthStore(state => state.logout) };
+  const toast = useToastStore();
   const [collapsed, setCollapsed] = React.useState(false);
-  const isAdmin = user?.role === "ADMIN";
 
-  const filtered = NAV_ITEMS.filter(i => i.roles.includes(user?.role ?? "USER"));
+  const role    = user?.role as UserRole | undefined;
+  const isAdmin = role === "ADMIN";
+  const filtered = NAV_ITEMS.filter(i => role && i.roles.includes(role));
 
-  const Item = ({ href, icon: Icon, label, danger = false }: { href: string; icon: React.ElementType; label: string; danger?: boolean }) => {
+  const handleLogout = () => {
+    logout();
+    toast.info("À bientôt !");
+    router.push("/login");
+  };
+
+  /* ─ Nav Item ─ */
+  const Item = ({
+    href,
+    icon: Icon,
+    label,
+    danger = false,
+  }: {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    danger?: boolean;
+  }) => {
     const active = pathname === href || pathname.startsWith(href + "/");
     return (
       <Link
         href={href}
         title={collapsed ? label : undefined}
         className={cn(
-          "group flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-all duration-150 select-none border-2",
+          "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 select-none",
           active
             ? danger
-              ? "bg-red-500 text-white border-red-500"
-              : "bg-emerald-500 text-white border-emerald-500"
+              ? "bg-red-500/15 text-red-300 border border-red-500/30"
+              : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
             : danger
-              ? "bg-transparent text-slate-400 border-transparent hover:border-red-500 hover:text-red-400"
-              : "bg-transparent text-slate-400 border-transparent hover:border-emerald-500/50 hover:text-white"
+              ? "text-slate-400 border border-transparent hover:bg-red-500/8 hover:text-red-400 hover:border-red-500/20"
+              : "text-slate-400 border border-transparent hover:bg-white/[0.04] hover:text-white hover:border-white/[0.06]"
         )}
       >
         <Icon className="w-4 h-4 shrink-0" />
-        <span className={cn(
-          "transition-all duration-200 whitespace-nowrap leading-none",
-          collapsed ? "w-0 opacity-0 overflow-hidden" : "w-auto opacity-100"
-        )}>
+        <span
+          className={cn(
+            "transition-all duration-200 whitespace-nowrap leading-none",
+            collapsed ? "w-0 opacity-0 overflow-hidden" : "w-auto opacity-100"
+          )}
+        >
           {label}
         </span>
       </Link>
@@ -69,7 +100,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden md:flex flex-col shrink-0 transition-all duration-300 ease-spring border-r border-white/[0.05] relative select-none",
+        "hidden md:flex flex-col shrink-0 transition-all duration-300 ease-in-out border-r border-white/[0.05] relative select-none",
         collapsed ? "w-[68px]" : "w-60"
       )}
       style={{ background: "linear-gradient(180deg, #0a1525 0%, #060e1c 100%)" }}
@@ -79,7 +110,7 @@ export function Sidebar() {
         onClick={() => setCollapsed(!collapsed)}
         className="absolute top-7 -right-3 w-6 h-6 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all z-50 border border-white/[0.08] shadow-card hover:border-emerald-500/30"
         style={{ background: "#0a1525" }}
-        aria-label="Toggle Sidebar"
+        aria-label="Réduire la barre latérale"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>
@@ -109,7 +140,7 @@ export function Sidebar() {
 
         {filtered.map(i => <Item key={i.href} {...i} />)}
 
-        {/* Admin section */}
+        {/* Admin section — visible uniquement par l'ADMIN */}
         {isAdmin && (
           <div className={cn("mt-5 pt-5 border-t border-white/[0.04] flex flex-col gap-1")}>
             {!collapsed && (
@@ -127,9 +158,32 @@ export function Sidebar() {
       <div className="px-3 py-4 border-t border-white/[0.04] flex flex-col gap-1">
         {BOTTOM_ITEMS.map(i => <Item key={i.href} {...i} />)}
 
+        {/* Logout button */}
+        <button
+          onClick={handleLogout}
+          title={collapsed ? "Déconnexion" : undefined}
+          className={cn(
+            "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 select-none w-full mt-1",
+            "text-slate-400 border border-transparent hover:bg-red-500/[0.08] hover:text-red-400 hover:border-red-500/20"
+          )}
+        >
+          <LogOut className="w-4 h-4 shrink-0" />
+          <span
+            className={cn(
+              "transition-all duration-200 whitespace-nowrap leading-none",
+              collapsed ? "w-0 opacity-0 overflow-hidden" : "w-auto opacity-100"
+            )}
+          >
+            Déconnexion
+          </span>
+        </button>
+
         {/* Version badge */}
         {!collapsed && (
-          <div className="mx-1 mt-3 p-3 rounded-xl border border-emerald-500/15 flex items-start gap-2.5" style={{ background: "rgba(16,185,129,0.05)" }}>
+          <div
+            className="mx-1 mt-3 p-3 rounded-xl border border-emerald-500/15 flex items-start gap-2.5"
+            style={{ background: "rgba(16,185,129,0.05)" }}
+          >
             <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
             <div>
               <span className="text-[11px] font-bold text-slate-300 block">Mode IA Activé</span>

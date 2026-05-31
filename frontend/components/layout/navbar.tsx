@@ -20,8 +20,9 @@ const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
 
 export function Navbar() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-  const toast = useToastStore();
+  const user   = useAuthStore(state => state.user);
+  const logout = useAuthStore(state => state.logout);
+  const toast  = useToastStore();
   const [avatar, setAvatar] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [critiques, setCritiques] = useState<ResultItem[]>([]);
@@ -56,7 +57,7 @@ export function Navbar() {
   };
 
   const handleLogout = () => {
-    if (logout) logout();
+    logout();
     toast.info("À bientôt !");
     router.push("/login");
   };

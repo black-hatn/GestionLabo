@@ -268,7 +268,7 @@ export default function PatientsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const canCreate = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
   const canEdit   = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";

@@ -14,7 +14,7 @@ import { AlertCircle, Plus, Eye, Edit2, Trash2, Download, Loader2, Receipt, Tren
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function InvoicesPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   // Only ADMIN and RECEPTIONIST can create/edit invoices
   const canWrite = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
 

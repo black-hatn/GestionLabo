@@ -119,7 +119,7 @@ function AccessDenied({ role }: { role: string }) {
 
 /* ─ Page ────────────────────────────────────────────────── */
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
   const role = (user?.role ?? "") as ValidRole;
   const isValidRole = VALID_ROLES.includes(role);
 

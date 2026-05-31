@@ -13,7 +13,7 @@ export function ModulePage({
   resource: string;
   samplePayload: Record<string, unknown>;
 }) {
-  const { accessToken } = useAuthStore();
+  const accessToken = useAuthStore(state => state.accessToken);
   const [items, setItems] = useState<Record<string, unknown>[]>([]);
   const [body, setBody] = useState(JSON.stringify(samplePayload, null, 2));
   const [error, setError] = useState<string | null>(null);

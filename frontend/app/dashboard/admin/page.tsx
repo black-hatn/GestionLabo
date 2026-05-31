@@ -53,7 +53,7 @@ const defaultForm: FormData = {
 };
 
 export default function AdminControlPanel() {
-  const { user: currentUser } = useAuthStore();
+  const currentUser = useAuthStore(state => state.user);
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

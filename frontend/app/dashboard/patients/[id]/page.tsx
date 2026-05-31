@@ -39,7 +39,7 @@ type Demande = {
 export default function PatientDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { accessToken } = useAuthStore();
+  const accessToken = useAuthStore(state => state.accessToken);
   const id = (params?.id ?? "") as string;
 
 

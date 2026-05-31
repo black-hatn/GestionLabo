@@ -48,7 +48,7 @@ type Invoice = {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { accessToken } = useAuthStore();
+  const accessToken = useAuthStore(state => state.accessToken);
   const id = (params?.id ?? "") as string;
 
 
