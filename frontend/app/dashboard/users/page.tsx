@@ -82,19 +82,19 @@ function UserModal({
   const title = mode === "create" ? "Nouvel utilisateur" : mode === "edit" ? "Modifier l'utilisateur" : "Détails utilisateur";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="rounded-2xl shadow-2xl w-full max-w-lg animate-fade-in border border-white/[0.08]" style={{ background: "rgba(12,20,36,0.97)" }}>
         {/* Header modal */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold text-neutral-900">{title}</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 transition-colors">
-            <X className="w-5 h-5 text-neutral-500" />
+        <div className="flex items-center justify-between p-6 border-b border-white/[0.07]">
+          <h2 className="text-xl font-bold text-white">{title}</h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+            <X className="w-5 h-5 text-slate-400" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700 text-sm">
+            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-red-400 text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
@@ -102,7 +102,7 @@ function UserModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Prénom *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Prénom *</label>
               <Input
                 value={form.first_name}
                 onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
@@ -112,7 +112,7 @@ function UserModal({
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Nom *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Nom *</label>
               <Input
                 value={form.last_name}
                 onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
@@ -124,7 +124,7 @@ function UserModal({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-neutral-600 mb-1">Email *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Email *</label>
             <Input
               type="email"
               value={form.email}
@@ -137,7 +137,7 @@ function UserModal({
 
           {mode === "create" && (
             <div>
-              <label className="block text-xs font-semibold text-neutral-600 mb-1">Mot de passe *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1">Mot de passe *</label>
               <div className="relative">
                 <Input
                   type={showPwd ? "text" : "password"}
@@ -149,7 +149,7 @@ function UserModal({
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-2.5 text-neutral-400 hover:text-neutral-600"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200"
                   onClick={() => setShowPwd(v => !v)}
                 >
                   {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -159,12 +159,13 @@ function UserModal({
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-neutral-600 mb-1">Rôle *</label>
+            <label className="block text-xs font-semibold text-slate-400 mb-1">Rôle *</label>
             <select
               value={form.role}
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
               disabled={readOnly}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-neutral-50 disabled:text-neutral-500"
+              className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              style={{ background: "rgba(255,255,255,0.05)" }}
             >
               {ROLES.map(r => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
@@ -174,7 +175,7 @@ function UserModal({
 
           {(mode === "edit" || mode === "view") && (
             <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-neutral-600">Statut</label>
+              <label className="text-xs font-semibold text-slate-400">Statut</label>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
@@ -193,7 +194,7 @@ function UserModal({
           )}
 
           {mode === "view" && user && (
-            <div className="bg-neutral-50 rounded-lg p-3 text-xs text-neutral-500 space-y-1">
+            <div className="rounded-lg p-3 text-xs text-slate-500 space-y-1 border border-white/[0.06]" style={{ background: "rgba(255,255,255,0.03)" }}>
               <p>ID : <span className="font-mono">{user.id}</span></p>
               <p>Créé le : {new Date(user.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}</p>
             </div>
@@ -232,18 +233,18 @@ function DeleteConfirm({
   loading: boolean;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-fade-in border border-white/[0.08]" style={{ background: "rgba(12,20,36,0.97)" }}>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-            <Trash2 className="w-6 h-6 text-red-600" />
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+            <Trash2 className="w-6 h-6 text-red-400" />
           </div>
           <div>
-            <h3 className="font-bold text-neutral-900">Supprimer l'utilisateur</h3>
-            <p className="text-sm text-neutral-500">{user.first_name} {user.last_name}</p>
+            <h3 className="font-bold text-white">Supprimer l'utilisateur</h3>
+            <p className="text-sm text-slate-400">{user.first_name} {user.last_name}</p>
           </div>
         </div>
-        <p className="text-sm text-neutral-600 mb-6">
+        <p className="text-sm text-slate-400 mb-6">
           Cette action est irréversible. L'utilisateur sera définitivement supprimé du système.
         </p>
         <div className="flex gap-3">
