@@ -1,374 +1,442 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
-  Activity, ArrowRight, ChevronRight, Zap, ShieldCheck, Clock, Brain, BarChart3,
-  TestTube2, Stethoscope, Star, Lock, Globe, Award, Check, Users, TrendingUp, Beaker
+  Activity, ArrowRight, Users, ClipboardList, FlaskConical,
+  Receipt, ShieldCheck, Beaker, Stethoscope, UserCheck,
+  TestTube2, FileText, ChevronRight, CheckCircle2,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
+import patientService       from "@/services/api/patient";
+import examRequestService   from "@/services/api/exam-request";
+import resultService        from "@/services/api/result";
+import { useAuthStore }     from "@/lib/auth-store";
 
-/* ─ DATA ─────────────────────────────────────────── */
-const stats = [
-  { value: "1.2M+", label: "Analyses traitées", icon: Beaker },
-  { value: "99.9%", label: "Précision IA", icon: Brain },
-  { value: "50+",   label: "Établissements", icon: Users },
-  { value: "<2s",   label: "Temps de réponse", icon: Zap },
+/* ─────────────────────────────── WORKFLOW STEPS ─── */
+const workflowSteps = [
+  {
+    step: "01",
+    icon: Users,
+    title: "Enregistrement Patient",
+    desc: "La réceptionniste crée le dossier du patient avec toutes ses informations médicales et administratives.",
+    actor: "Réceptionniste",
+    color: "blue",
+  },
+  {
+    step: "02",
+    icon: ClipboardList,
+    title: "Demande d'Examen",
+    desc: "Le médecin ou la réceptionniste créée une demande d'analyse biologique pour le patient.",
+    actor: "Médecin / Réceptionniste",
+    color: "purple",
+  },
+  {
+    step: "03",
+    icon: TestTube2,
+    title: "Prélèvement & Analyse",
+    desc: "Le préleveur collecte l'échantillon. Le technicien réalise l'analyse et saisit les résultats.",
+    actor: "Préleveur · Technicien",
+    color: "teal",
+  },
+  {
+    step: "04",
+    icon: Receipt,
+    title: "Résultats & Facturation",
+    desc: "Les résultats sont consultables par le médecin. La réceptionniste génère la facture et enregistre le paiement.",
+    actor: "Médecin · Admin",
+    color: "emerald",
+  },
 ];
 
-const features = [
-  {
-    icon: Brain,
-    title: "IA Prédictive NLP",
-    desc: "Notre moteur d'IA analyse les valeurs biologiques et génère automatiquement des conclusions médicales contextualisées.",
-    accent: "emerald",
-    tag: "Nouveau",
-  },
-  {
-    icon: Clock,
-    title: "Alertes Temps Réel",
-    desc: "Notifications instantanées pour les résultats critiques avec escalade automatique vers le médecin prescripteur.",
-    accent: "teal",
-    tag: null,
-  },
+/* ─────────────────────────────── ROLES ─────────────────── */
+const roles = [
   {
     icon: ShieldCheck,
-    title: "Sécurité Niveau Militaire",
-    desc: "Chiffrement AES-256 de bout en bout. Conformité totale aux normes RGPD, HIPAA et ISO 27001.",
-    accent: "blue",
-    tag: null,
+    title: "Administrateur",
+    color: "red",
+    perms: [
+      "Accès complet à toutes les fonctionnalités",
+      "Gestion des utilisateurs et des rôles",
+      "Suppression de n'importe quel enregistrement",
+      "Accès au panneau d'administration",
+    ],
   },
   {
-    icon: BarChart3,
-    title: "Analytics Avancés",
-    desc: "Tableaux de bord personnalisables avec graphiques interactifs et tendances prédictives par cohorte.",
-    accent: "indigo",
-    tag: null,
-  },
-  {
-    icon: TestTube2,
-    title: "Catalogue d'Examens",
-    desc: "Bibliothèque de 500+ types d'analyses avec plages de référence automatiquement intégrées et validées.",
-    accent: "cyan",
-    tag: null,
+    icon: UserCheck,
+    title: "Réceptionniste",
+    color: "blue",
+    perms: [
+      "Enregistrement et modification des patients",
+      "Création de demandes d'examens",
+      "Gestion de la facturation",
+      "Consultation de tous les dossiers",
+    ],
   },
   {
     icon: Stethoscope,
-    title: "Aide au Diagnostic",
-    desc: "Suggestions de corrélations biologiques croisées pour accompagner le praticien dans sa décision.",
-    accent: "emerald",
-    tag: "IA",
+    title: "Préleveur",
+    color: "amber",
+    perms: [
+      "Consultation des demandes d'examens",
+      "Prise en charge d'une demande (EN_ATTENTE → EN_COURS)",
+      "Accès aux dossiers patients",
+    ],
+  },
+  {
+    icon: FlaskConical,
+    title: "Technicien Labo",
+    color: "teal",
+    perms: [
+      "Saisie et modification des résultats",
+      "Clôture d'une demande (EN_COURS → TERMINÉ)",
+      "Gestion du catalogue d'analyses",
+    ],
+  },
+  {
+    icon: Beaker,
+    title: "Médecin",
+    color: "emerald",
+    perms: [
+      "Consultation des résultats biologiques",
+      "Accès aux dossiers patients",
+      "Consultation des demandes d'examens",
+    ],
   },
 ];
 
-const accentStyles: Record<string, { ring: string; icon: string; tag: string; glow: string }> = {
-  emerald: {
-    ring:  "group-hover:border-emerald-500/30",
-    icon:  "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/15",
-    tag:   "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    glow:  "group-hover:shadow-emerald-500/10",
-  },
-  teal: {
-    ring:  "group-hover:border-teal-500/30",
-    icon:  "bg-teal-500/10 text-teal-400 group-hover:bg-teal-500/15",
-    tag:   "bg-teal-500/10 text-teal-400 border-teal-500/20",
-    glow:  "group-hover:shadow-teal-500/10",
-  },
-  blue: {
-    ring:  "group-hover:border-blue-500/30",
-    icon:  "bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/15",
-    tag:   "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    glow:  "group-hover:shadow-blue-500/10",
-  },
-  indigo: {
-    ring:  "group-hover:border-indigo-500/30",
-    icon:  "bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/15",
-    tag:   "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-    glow:  "group-hover:shadow-indigo-500/10",
-  },
-  cyan: {
-    ring:  "group-hover:border-cyan-500/30",
-    icon:  "bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/15",
-    tag:   "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-    glow:  "group-hover:shadow-cyan-500/10",
-  },
+/* ─────────────────────────────── FEATURES ──────────────── */
+const features = [
+  { icon: Users,       title: "Gestion des Patients",       desc: "Dossiers complets avec numéro de dossier, historique, coordonnées et statut actif/inactif.", color: "blue"    },
+  { icon: ClipboardList,title: "Demandes d'Examens",        desc: "Workflow de statuts (En attente → En cours → Terminé/Annulé) avec transitions contrôlées par rôle.", color: "purple"  },
+  { icon: FlaskConical, title: "Résultats Biologiques",     desc: "Saisie des valeurs mesurées, valeurs de référence et statut (Normal / Anormal / Critique).", color: "teal"    },
+  { icon: Receipt,      title: "Facturation & Paiements",   desc: "Création de factures liées aux demandes, suivi des paiements et statuts (Envoyée / Payée / En retard).", color: "amber"   },
+  { icon: Beaker,       title: "Catalogue d'Analyses",      desc: "Bibliothèque des types d'examens avec unités de mesure et valeurs de référence configurables.", color: "cyan"    },
+  { icon: ShieldCheck,  title: "Contrôle d'Accès (RBAC)",   desc: "5 rôles distincts avec permissions fines. Chaque action est vérifiée côté backend et frontend.", color: "emerald" },
+];
+
+/* ─────────────────────────────── COLOR MAPS ────────────── */
+const colorMap: Record<string, { bg: string; text: string; border: string; badge: string }> = {
+  blue:    { bg: "bg-blue-500/10",    text: "text-blue-400",    border: "border-blue-500/20",    badge: "bg-blue-500/10 text-blue-400 border-blue-500/20"    },
+  purple:  { bg: "bg-purple-500/10",  text: "text-purple-400",  border: "border-purple-500/20",  badge: "bg-purple-500/10 text-purple-400 border-purple-500/20"  },
+  teal:    { bg: "bg-teal-500/10",    text: "text-teal-400",    border: "border-teal-500/20",    badge: "bg-teal-500/10 text-teal-400 border-teal-500/20"    },
+  emerald: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
+  amber:   { bg: "bg-amber-500/10",   text: "text-amber-400",   border: "border-amber-500/20",   badge: "bg-amber-500/10 text-amber-400 border-amber-500/20"   },
+  red:     { bg: "bg-red-500/10",     text: "text-red-400",     border: "border-red-500/20",     badge: "bg-red-500/10 text-red-400 border-red-500/20"     },
+  cyan:    { bg: "bg-cyan-500/10",    text: "text-cyan-400",    border: "border-cyan-500/20",    badge: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"    },
 };
 
-const testimonials = [
-  {
-    name:   "Dr. Fatiha Benali",
-    role:   "Chef de service, CHU Mustapha",
-    quote:  "NovaBio Lab a transformé notre workflow. La détection automatique des anomalies critiques nous permet d'intervenir 3× plus vite.",
-    avatar: "FB",
-    color:  "from-emerald-500 to-teal-600",
-  },
-  {
-    name:   "Pr. Ibrahima Sow",
-    role:   "Biologiste médical, Clinique du Fleuve",
-    quote:  "La qualité des interprétations IA est remarquable. Notre équipe gagne en moyenne 2h par jour sur la rédaction des comptes-rendus.",
-    avatar: "IS",
-    color:  "from-blue-500 to-indigo-600",
-  },
-  {
-    name:   "Dr. Amara Koné",
-    role:   "Médecin généraliste, Cabinet privé",
-    quote:  "Interface intuitive, résultats instantanés. Je prescris et consulte les analyses de mes patients en quelques secondes depuis n'importe où.",
-    avatar: "AK",
-    color:  "from-teal-500 to-cyan-600",
-  },
-];
+/* ─────────────────────────────── LIVE STATS HOOK ───────── */
+function useLiveStats() {
+  const { accessToken } = useAuthStore();
+  const [stats, setStats] = useState<{ patients: number; requests: number; results: number } | null>(null);
 
-const planFeatures = [
-  "Gestion illimitée des patients",
-  "IA interprétative intégrée",
-  "Alertes critiques en temps réel",
-  "Export PDF des rapports",
-  "Support prioritaire 24/7",
-  "Conformité RGPD & HIPAA garantie",
-];
+  useEffect(() => {
+    if (!accessToken) return; // only fetch if authenticated
+    (async () => {
+      try {
+        const [p, r, res] = await Promise.all([
+          patientService.getPatients(1, 1),
+          examRequestService.getExamRequests(1, 1),
+          resultService.getResults(1, 1),
+        ]);
+        setStats({ patients: p.total ?? 0, requests: r.total ?? 0, results: res.total ?? 0 });
+      } catch { /* silent */ }
+    })();
+  }, [accessToken]);
 
-/* ─ COMPONENT ────────────────────────────────────── */
+  return stats;
+}
+
+/* ─────────────────────────────── PAGE ──────────────────── */
 export default function HomePage() {
+  const stats = useLiveStats();
+
   return (
     <div className="relative min-h-screen flex flex-col overflow-x-hidden" style={{ background: "#050c1a" }}>
-      {/* ── Global ambient light ── */}
+
+      {/* ── Ambient glow ── */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
-        <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-emerald-500/[0.06] rounded-full blur-[140px]" />
-        <div className="absolute top-1/2 -right-32 w-[600px] h-[600px] bg-blue-600/[0.05] rounded-full blur-[120px]" />
-        <div className="absolute -bottom-32 left-0 w-[500px] h-[400px] bg-teal-500/[0.05] rounded-full blur-[100px]" />
-        {/* Subtle dot grid */}
-        <div className="absolute inset-0 dot-pattern opacity-30" />
+        <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-emerald-500/[0.05] rounded-full blur-[140px]" />
+        <div className="absolute top-1/2 -right-32 w-[600px] h-[600px] bg-blue-600/[0.04] rounded-full blur-[120px]" />
+        <div className="absolute -bottom-32 left-0 w-[500px] h-[400px] bg-teal-500/[0.04] rounded-full blur-[100px]" />
+        <div className="absolute inset-0 dot-pattern opacity-20" />
       </div>
 
       <Navbar />
 
       <main className="flex-1 relative z-10">
 
-        {/* ══════════════════════════════ HERO ══════════════════════════ */}
-        <section className="relative pt-12 pb-28 px-5 flex flex-col items-center text-center overflow-hidden">
-          {/* Live badge */}
-          <div className="animate-fade-in inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-400 text-xs font-bold uppercase tracking-[0.15em] mb-8 backdrop-blur-sm">
+        {/* ══════════════════ HERO ══════════════════════════════════ */}
+        <section className="relative pt-16 pb-24 px-5 flex flex-col items-center text-center">
+
+          {/* Pill badge */}
+          <div className="animate-fade-in inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-400 text-xs font-bold uppercase tracking-widest mb-8">
             <span className="relative flex h-1.5 w-1.5">
               <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
-            Plateforme Médicale IA · Nouvelle Génération
+            Plateforme Médicale · Gestion de Laboratoire
           </div>
 
           {/* Headline */}
-          <h1 className="animate-slide-up max-w-4xl font-display font-extrabold tracking-tight leading-[1.06]" style={{ fontSize: "clamp(2.6rem, 7vw, 5.5rem)" }}>
-            Le diagnostic biologique,{" "}
-            <span className="gradient-text-hero glow-text-emerald">
-              réinventé par l&apos;IA.
-            </span>
+          <h1
+            className="animate-slide-up max-w-4xl font-display font-extrabold tracking-tight leading-[1.08] text-white mb-6"
+            style={{ fontSize: "clamp(2.4rem, 6vw, 4.8rem)" }}
+          >
+            Gérez votre laboratoire médical{" "}
+            <span className="gradient-text-hero">de A à Z.</span>
           </h1>
 
-          <p className="animate-slide-up delay-100 mt-7 max-w-2xl text-base md:text-lg text-slate-400 leading-relaxed">
-            Centralisez vos analyses, automatisez vos rapports et accédez à des diagnostics prédictifs
-            en temps réel dans un environnement{" "}
-            <span className="text-slate-200 font-semibold">100% sécurisé et conforme HIPAA</span>.
+          <p className="animate-slide-up delay-100 max-w-2xl text-base md:text-lg text-slate-400 leading-relaxed mb-10">
+            NovaBio centralise la gestion des patients, des demandes d&apos;examens, des résultats biologiques
+            et de la facturation — avec un contrôle d&apos;accès précis pour chaque rôle de votre équipe.
           </p>
 
-          {/* CTA Row */}
-          <div className="animate-slide-up delay-200 flex flex-col sm:flex-row gap-4 mt-11">
+          {/* Bootstrap-style CTA buttons */}
+          <div className="animate-slide-up delay-200 flex flex-col sm:flex-row gap-3 mb-14">
             <Link href="/login">
-              <button className="h-13 px-8 rounded-full text-base font-bold btn-emerald flex items-center gap-2 group">
-                Démarrer gratuitement
-                <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
+              <button className="
+                h-12 px-8 rounded text-base font-bold
+                bg-emerald-500 text-white border-2 border-emerald-500
+                hover:bg-emerald-600 hover:border-emerald-600
+                active:bg-emerald-700
+                transition-all duration-150 flex items-center gap-2 group shadow
+              ">
+                Accéder à la plateforme
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </Link>
-            <Link href="/services">
-              <button className="h-13 px-8 rounded-full text-base font-semibold btn-ghost flex items-center gap-2 group">
-                Voir la démo
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+            <a href="#workflow">
+              <button className="
+                h-12 px-8 rounded text-base font-semibold
+                bg-transparent text-slate-300 border-2 border-slate-600
+                hover:border-slate-400 hover:text-white
+                active:bg-white/[0.05]
+                transition-all duration-150 flex items-center gap-2
+              ">
+                Comment ça marche
+                <ChevronRight className="w-4 h-4" />
               </button>
-            </Link>
+            </a>
           </div>
 
-          {/* Trust badges */}
-          <div className="animate-fade-in delay-400 flex flex-wrap justify-center gap-2 mt-10">
-            {[
-              { icon: ShieldCheck, label: "RGPD & HIPAA" },
-              { icon: Lock,        label: "Chiffrement AES-256" },
-              { icon: Globe,       label: "+50 Établissements" },
-              { icon: Award,       label: "Certifié ISO 27001" },
-            ].map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-semibold text-slate-400">
-                <Icon className="w-3.5 h-3.5 text-emerald-400" />
-                {label}
-              </div>
-            ))}
-          </div>
-
-        </section>
-
-        {/* ══════════════════════════════ STATS ════════════════════════ */}
-        <section className="relative py-16 border-y border-white/[0.05]" style={{ background: "rgba(12,24,40,0.4)" }}>
-          <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map(({ value, label, icon: Icon }, i) => (
-              <div
-                key={label}
-                className={`text-center animate-fade-in`}
-                style={{ animationDelay: `${i * 80}ms` }}
-              >
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-3 mx-auto">
-                  <Icon className="w-5 h-5 text-emerald-400" />
-                </div>
-                <div className="text-3xl md:text-4xl font-extrabold font-display gradient-text-emerald leading-none">{value}</div>
-                <div className="text-sm text-slate-500 mt-1.5 font-medium">{label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ══════════════════════════════ FEATURES ════════════════════ */}
-        <section className="max-w-7xl mx-auto px-6 py-28">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400 text-xs font-bold uppercase tracking-[0.15em] mb-5">
-              <Zap className="w-3.5 h-3.5" />
-              Fonctionnalités
+          {/* Live stats — only shown when authenticated */}
+          {stats && (
+            <div className="animate-fade-in flex flex-wrap justify-center gap-6">
+              {[
+                { label: "Patients enregistrés", value: stats.patients, icon: Users,         color: "blue"    },
+                { label: "Demandes d'examens",   value: stats.requests, icon: ClipboardList,  color: "purple"  },
+                { label: "Résultats enregistrés",value: stats.results,  icon: FlaskConical,   color: "teal"    },
+              ].map(({ label, value, icon: Icon, color }) => {
+                const c = colorMap[color];
+                return (
+                  <div key={label} className={`flex items-center gap-3 px-5 py-3 rounded-xl border ${c.border} ${c.bg}`}>
+                    <Icon className={`w-5 h-5 ${c.text}`} />
+                    <div className="text-left">
+                      <div className={`text-2xl font-extrabold ${c.text}`}>{value}</div>
+                      <div className="text-xs text-slate-500">{label}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold font-display text-white mb-4 leading-tight">
-              Pourquoi choisir{" "}
-              <span className="gradient-text-emerald">NovaBio Lab</span> ?
+          )}
+
+          {/* Static trust badges when not authenticated */}
+          {!stats && (
+            <div className="animate-fade-in delay-300 flex flex-wrap justify-center gap-2">
+              {[
+                { icon: ShieldCheck, label: "Accès basé sur les rôles (RBAC)" },
+                { icon: CheckCircle2, label: "Workflow de statuts intégré"    },
+                { icon: FileText,    label: "Export & Facturation"             },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-semibold text-slate-400 border border-white/[0.06]">
+                  <Icon className="w-3.5 h-3.5 text-emerald-400" />
+                  {label}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ══════════════════ WORKFLOW ══════════════════════════════ */}
+        <section id="workflow" className="relative py-24 border-y border-white/[0.05]" style={{ background: "rgba(10,18,32,0.6)" }}>
+          <div className="max-w-6xl mx-auto px-6">
+
+            <div className="text-center mb-16">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.03] text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">
+                <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                Comment ça marche
+              </div>
+              <h2 className="text-3xl md:text-4xl font-extrabold font-display text-white mb-3">
+                Le flux complet en <span className="gradient-text-emerald">4 étapes</span>
+              </h2>
+              <p className="text-slate-400 text-base max-w-lg mx-auto">
+                De l&apos;enregistrement du patient jusqu&apos;à la délivrance des résultats et la facturation.
+              </p>
+            </div>
+
+            {/* Steps grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
+              {/* Connector line (desktop only) */}
+              <div className="hidden lg:block absolute top-[2.75rem] left-[12%] right-[12%] h-[2px] bg-gradient-to-r from-blue-500/30 via-teal-500/30 to-emerald-500/30" />
+
+              {workflowSteps.map(({ step, icon: Icon, title, desc, actor, color }, i) => {
+                const c = colorMap[color];
+                return (
+                  <div key={step} className={`relative flex flex-col rounded-2xl p-6 border ${c.border} ${c.bg} animate-fade-in`}
+                    style={{ animationDelay: `${i * 100}ms` }}>
+                    {/* Step number */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className={`w-11 h-11 rounded-xl ${c.bg} border ${c.border} flex items-center justify-center shrink-0`}>
+                        <Icon className={`w-5 h-5 ${c.text}`} />
+                      </div>
+                      <span className={`text-3xl font-extrabold font-display ${c.text} opacity-30`}>{step}</span>
+                    </div>
+                    <h3 className="font-bold text-white text-base mb-2 leading-snug">{title}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed flex-1">{desc}</p>
+                    <div className={`mt-4 inline-flex self-start items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border ${c.badge}`}>
+                      {actor}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* ══════════════════ ROLES ═════════════════════════════════ */}
+        <section id="roles" className="max-w-7xl mx-auto px-6 py-24">
+          <div className="text-center mb-14">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.03] text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">
+              <Users className="w-3.5 h-3.5 text-blue-400" />
+              Gestion des accès
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold font-display text-white mb-3">
+              5 rôles, <span className="gradient-text-emerald">des permissions précises</span>
             </h2>
-            <p className="text-slate-400 text-lg max-w-xl mx-auto">
-              Une infrastructure médicale robuste, pensée pour les professionnels de santé les plus exigeants.
+            <p className="text-slate-400 text-base max-w-lg mx-auto">
+              Chaque membre de votre équipe dispose exactement des accès dont il a besoin, ni plus, ni moins.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {features.map(({ icon: Icon, title, desc, accent, tag }, i) => {
-              const a = accentStyles[accent] ?? accentStyles.emerald;
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {roles.map(({ icon: Icon, title, color, perms }, i) => {
+              const c = colorMap[color];
               return (
-                <div
-                  key={title}
-                  className={`group card-premium rounded-2xl p-7 border border-white/[0.06] cursor-default transition-all duration-500 hover:shadow-xl ${a.ring} ${a.glow} animate-fade-in`}
-                  style={{ animationDelay: `${i * 80}ms` }}
+                <div key={title}
+                  className={`group rounded-2xl p-5 border border-white/[0.07] hover:border-current transition-all duration-300 animate-fade-in`}
+                  style={{ background: "rgba(10,21,37,0.7)", animationDelay: `${i * 80}ms` }}
                 >
-                  <div className="flex items-start justify-between mb-5">
-                    <div className={`w-11 h-11 rounded-xl ${a.icon} flex items-center justify-center transition-all duration-300 group-hover:scale-110`}>
-                      <Icon className="w-5.5 h-5.5" />
-                    </div>
-                    {tag && (
-                      <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-widest ${a.tag}`}>
-                        {tag}
-                      </span>
-                    )}
+                  <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center mb-4`}>
+                    <Icon className={`w-5 h-5 ${c.text}`} />
                   </div>
-                  <h3 className="text-base font-bold text-white mb-2 leading-snug">{title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
-                  <div className="mt-5 flex items-center text-xs font-semibold text-emerald-500 group-hover:text-emerald-400 transition-colors">
-                    En savoir plus
-                    <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
+                  <h3 className={`font-bold text-sm mb-3 ${c.text}`}>{title}</h3>
+                  <ul className="space-y-1.5">
+                    {perms.map((p) => (
+                      <li key={p} className="flex items-start gap-1.5 text-xs text-slate-400">
+                        <CheckCircle2 className={`w-3 h-3 ${c.text} shrink-0 mt-0.5`} />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               );
             })}
           </div>
         </section>
 
-        {/* ══════════════════════════════ TESTIMONIALS ════════════════ */}
-        <section className="relative py-24 overflow-hidden" style={{ background: "rgba(12,24,40,0.35)" }}>
+        {/* ══════════════════ FEATURES ══════════════════════════════ */}
+        <section id="features" className="relative py-24 border-t border-white/[0.05]" style={{ background: "rgba(10,18,32,0.5)" }}>
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-14">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-slate-400 text-xs font-bold uppercase tracking-[0.15em] mb-5">
-                <Star className="w-3.5 h-3.5 text-amber-400" />
-                Témoignages
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/[0.1] bg-white/[0.03] text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">
+                <Beaker className="w-3.5 h-3.5 text-teal-400" />
+                Fonctionnalités
               </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold font-display text-white">
-                La confiance des professionnels de santé
+              <h2 className="text-3xl md:text-4xl font-extrabold font-display text-white mb-3">
+                Tout ce dont votre labo a besoin
               </h2>
+              <p className="text-slate-400 text-base max-w-lg mx-auto">
+                Un système intégré couvrant l&apos;ensemble du cycle d&apos;analyse biologique.
+              </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-5">
-              {testimonials.map(({ name, role, quote, avatar, color }, i) => (
-                <div
-                  key={name}
-                  className="card-premium rounded-2xl p-7 border border-white/[0.06] flex flex-col gap-5 animate-slide-up"
-                  style={{ animationDelay: `${i * 100}ms` }}
-                >
-                  <div className="flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, j) => (
-                      <Star key={j} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    ))}
-                  </div>
-                  <p className="text-slate-300 text-sm leading-relaxed flex-1">
-                    &ldquo;{quote}&rdquo;
-                  </p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-xs font-extrabold text-white shrink-0`}>
-                      {avatar}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {features.map(({ icon: Icon, title, desc, color }, i) => {
+                const c = colorMap[color];
+                return (
+                  <div key={title}
+                    className={`group rounded-2xl p-7 border border-white/[0.06] hover:border-current transition-all duration-300 animate-fade-in hover:shadow-xl`}
+                    style={{ background: "rgba(10,21,37,0.8)", animationDelay: `${i * 80}ms` }}
+                  >
+                    <div className={`w-11 h-11 rounded-xl ${c.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className={`w-5 h-5 ${c.text}`} />
                     </div>
-                    <div>
-                      <div className="text-sm font-bold text-white">{name}</div>
-                      <div className="text-xs text-slate-500">{role}</div>
-                    </div>
+                    <h3 className="text-base font-bold text-white mb-2">{title}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{desc}</p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* ══════════════════════════════ CTA BANNER ══════════════════ */}
-        <section className="max-w-5xl mx-auto px-6 py-24">
-          <div className="relative rounded-3xl overflow-hidden border border-emerald-500/20 p-12 md:p-16 text-center animate-border-glow">
-            {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/15 via-teal-600/10 to-blue-600/10" />
-            <div className="absolute inset-0 dot-pattern opacity-20" />
-            {/* Orbs */}
-            <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-80 bg-emerald-500/20 rounded-full blur-3xl" />
+        {/* ══════════════════ CTA FINAL ═════════════════════════════ */}
+        <section className="max-w-4xl mx-auto px-6 py-24">
+          <div className="relative rounded-2xl overflow-hidden border border-emerald-500/20 p-12 md:p-16 text-center">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 via-teal-600/5 to-blue-600/10" />
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-72 h-72 bg-emerald-500/15 rounded-full blur-3xl" />
 
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/[0.06] text-emerald-400 text-xs font-bold uppercase tracking-widest mb-6">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Prêt à transformer votre laboratoire ?
-              </div>
-              <h2 className="text-3xl md:text-5xl font-extrabold font-display text-white mb-5">
-                Rejoignez{" "}
-                <span className="gradient-text-emerald">50+</span>{" "}
-                établissements médicaux
+              <h2 className="text-3xl md:text-4xl font-extrabold font-display text-white mb-4">
+                Prêt à démarrer ?
               </h2>
-              <p className="text-slate-400 text-lg mb-10 max-w-xl mx-auto">
-                Déployez NovaBio Lab en moins de 48h et découvrez comment l&apos;IA peut transformer vos analyses biologiques.
+              <p className="text-slate-400 text-base mb-10 max-w-md mx-auto">
+                Connectez-vous à votre espace et commencez à gérer votre laboratoire dès maintenant.
               </p>
 
-              {/* Plan features */}
-              <div className="flex flex-wrap justify-center gap-x-8 gap-y-3 mb-10">
-                {planFeatures.map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-sm text-slate-300">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    {f}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {/* Bootstrap-style buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/login">
-                  <button className="h-13 px-9 rounded-full text-base font-bold btn-emerald flex items-center gap-2 group">
-                    Démarrer maintenant — Gratuit
+                  <button className="
+                    h-12 px-10 rounded text-base font-bold
+                    bg-emerald-500 text-white border-2 border-emerald-500
+                    hover:bg-emerald-600 hover:border-emerald-600
+                    active:bg-emerald-700
+                    transition-all duration-150 flex items-center gap-2 group shadow-md
+                  ">
+                    Se connecter
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </Link>
-                <Link href="/about">
-                  <button className="h-13 px-9 rounded-full text-base font-semibold btn-ghost flex items-center gap-2">
-                    En savoir plus
+                <a href="#workflow">
+                  <button className="
+                    h-12 px-10 rounded text-base font-semibold
+                    bg-transparent text-slate-300 border-2 border-slate-600
+                    hover:border-slate-400 hover:text-white
+                    transition-all duration-150
+                  ">
+                    Revoir le fonctionnement
                   </button>
-                </Link>
+                </a>
               </div>
             </div>
           </div>
         </section>
+
       </main>
 
-      {/* ══════════════════════════════ FOOTER ══════════════════════════ */}
-      <footer className="relative border-t border-white/[0.05] pt-14 pb-8 z-10" style={{ background: "rgba(5,12,26,0.95)" }}>
+      {/* ══════════════════ FOOTER ════════════════════════════════ */}
+      <footer className="relative border-t border-white/[0.05] pt-12 pb-7 z-10" style={{ background: "rgba(5,12,26,0.98)" }}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-            <div className="col-span-1 md:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
+
+            {/* Brand */}
+            <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-emerald">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                   <Activity className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex flex-col leading-none">
@@ -378,45 +446,45 @@ export default function HomePage() {
                   <span className="text-[9px] font-semibold text-slate-600 tracking-[0.18em] uppercase">Lab Platform</span>
                 </div>
               </div>
-              <p className="text-slate-500 max-w-sm text-sm leading-relaxed">
-                La plateforme de gestion de laboratoire médical de nouvelle génération, propulsée par l&apos;intelligence artificielle.
+              <p className="text-slate-500 text-sm leading-relaxed max-w-xs">
+                Plateforme de gestion de laboratoire médical avec contrôle d&apos;accès par rôle, workflow de résultats et facturation intégrée.
               </p>
-              <div className="flex gap-2 mt-5">
-                {["RGPD", "HIPAA", "ISO 27001", "AES-256"].map((b) => (
-                  <span key={b} className="text-[9px] font-bold px-2.5 py-1 rounded-full border border-white/[0.08] text-slate-500">
-                    {b}
-                  </span>
-                ))}
-              </div>
             </div>
 
+            {/* Navigation */}
             <div>
-              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Plateforme</h4>
+              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-widest">Navigation</h4>
               <ul className="space-y-2.5 text-sm text-slate-500">
-                {["Fonctionnalités", "Notre IA Médicale", "Connexion"].map((l) => (
-                  <li key={l}>
-                    <Link href={l === "Connexion" ? "/login" : "/"} className="hover:text-emerald-400 transition-colors">
-                      {l}
-                    </Link>
+                {[
+                  { label: "Accueil",        href: "/"          },
+                  { label: "Fonctionnement", href: "#workflow"   },
+                  { label: "Rôles",          href: "#roles"      },
+                  { label: "Fonctionnalités",href: "#features"   },
+                  { label: "Connexion",      href: "/login"      },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <a href={href} className="hover:text-emerald-400 transition-colors">{label}</a>
                   </li>
                 ))}
               </ul>
             </div>
 
+            {/* Modules */}
             <div>
-              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-[0.15em]">Légal</h4>
+              <h4 className="text-white font-bold mb-4 text-xs uppercase tracking-widest">Modules</h4>
               <ul className="space-y-2.5 text-sm text-slate-500">
-                {["Confidentialité", "Conditions d'utilisation", "Conformité RGPD"].map((l) => (
-                  <li key={l}>
-                    <Link href="#" className="hover:text-emerald-400 transition-colors">{l}</Link>
+                {["Patients", "Demandes d'examens", "Résultats biologiques", "Facturation", "Catalogue d'analyses"].map(l => (
+                  <li key={l} className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500/60 shrink-0" />
+                    {l}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-white/[0.05] pt-7 flex flex-col md:flex-row items-center justify-between text-xs text-slate-600 gap-3">
-            <p>© {new Date().getFullYear()} Laboratoire NovaBio. Tous droits réservés.</p>
+          <div className="border-t border-white/[0.05] pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-600 gap-3">
+            <p>© {new Date().getFullYear()} NovaBio Lab. Tous droits réservés.</p>
             <div className="flex items-center gap-2">
               <div className="relative flex h-1.5 w-1.5">
                 <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />

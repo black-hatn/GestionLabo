@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Activity, ChevronRight, Menu, X } from "lucide-react";
+import { Activity, Menu, X } from "lucide-react";
 
 const navLinks = [
-  { href: "/", label: "Accueil" },
-  { href: "/services", label: "Fonctionnalités" },
-  { href: "/about", label: "À Propos" },
+  { href: "/",         label: "Accueil" },
+  { href: "/#workflow", label: "Fonctionnement" },
+  { href: "/#roles",   label: "Rôles" },
+  { href: "/#features",label: "Fonctionnalités" },
 ];
 
 export function Navbar() {
-  const pathname = usePathname();
-  const [scrolled, setScrolled] = useState(false);
+  const pathname  = usePathname();
+  const [scrolled, setScrolled]     = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -31,18 +32,17 @@ export function Navbar() {
             : "bg-transparent"
         }`}
       >
-        {/* Gradient line */}
         {scrolled && (
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
         )}
 
-        {/* Logo */}
+        {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-2.5 group shrink-0">
           <div className="relative">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-emerald group-hover:shadow-emerald-lg transition-all duration-300 group-hover:scale-105">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-emerald group-hover:scale-105 transition-transform duration-300">
               <Activity className="w-5 h-5 text-white" />
             </div>
-            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-bg">
+            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#050c1a]">
               <div className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
             </div>
           </div>
@@ -54,12 +54,12 @@ export function Navbar() {
           </div>
         </Link>
 
-        {/* Nav Links */}
+        {/* ── Nav links ── */}
         <nav className="hidden md:flex items-center gap-1 text-sm">
           {navLinks.map(({ href, label }) => {
             const active = pathname === href;
             return (
-              <Link
+              <a
                 key={href}
                 href={href}
                 className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
@@ -69,29 +69,48 @@ export function Navbar() {
                 }`}
               >
                 {label}
-                {active && (
-                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400" />
-                )}
-              </Link>
+              </a>
             );
           })}
         </nav>
 
-        {/* Actions */}
+        {/* ── Bootstrap-style action buttons ── */}
         <div className="flex items-center gap-2.5">
+          {/* btn-outline (Bootstrap outline style) */}
           <Link href="/login" className="hidden sm:block">
-            <button className="h-9 px-4 rounded-full text-sm font-semibold text-slate-300 border border-white/[0.08] bg-white/[0.04] hover:bg-white/[0.08] hover:text-white hover:border-white/15 transition-all duration-200">
+            <button
+              className="
+                h-9 px-5 rounded text-sm font-semibold
+                border-2 border-emerald-500 text-emerald-400
+                bg-transparent
+                hover:bg-emerald-500 hover:text-white
+                active:bg-emerald-600 active:border-emerald-600
+                transition-all duration-150 select-none
+              "
+            >
               Connexion
             </button>
           </Link>
+
+          {/* btn-solid (Bootstrap solid style) */}
           <Link href="/login">
-            <button className="h-9 px-5 rounded-full text-sm font-bold btn-emerald flex items-center gap-1.5">
+            <button
+              className="
+                h-9 px-5 rounded text-sm font-bold
+                bg-emerald-500 text-white border-2 border-emerald-500
+                hover:bg-emerald-600 hover:border-emerald-600
+                active:bg-emerald-700
+                transition-all duration-150 select-none
+                shadow-sm
+              "
+            >
               Accéder au Dashboard
-              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </Link>
+
+          {/* Mobile burger */}
           <button
-            className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="md:hidden p-2 rounded text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -99,25 +118,33 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Menu */}
+      {/* ── Mobile menu ── */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="absolute inset-0 bg-bg/80 backdrop-blur-xl" />
-          <nav className="absolute top-[68px] left-4 right-4 glass-strong rounded-2xl p-4 border border-white/[0.08] animate-scale-in">
+          <div className="absolute inset-0 bg-[#050c1a]/90 backdrop-blur-xl" />
+          <nav
+            className="absolute top-[68px] left-4 right-4 rounded-2xl p-4 border border-white/[0.08] animate-scale-in"
+            style={{ background: "rgba(10,21,37,0.97)" }}
+            onClick={e => e.stopPropagation()}
+          >
             {navLinks.map(({ href, label }) => (
-              <Link
+              <a
                 key={href}
                 href={href}
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-between px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.06] font-medium transition-all"
+                className="flex items-center px-4 py-3 rounded-xl text-slate-300 hover:text-white hover:bg-white/[0.06] font-medium transition-all"
               >
                 {label}
-                <ChevronRight className="w-4 h-4 text-slate-600" />
-              </Link>
+              </a>
             ))}
-            <div className="mt-3 pt-3 border-t border-white/[0.06]">
+            <div className="mt-3 pt-3 border-t border-white/[0.06] flex flex-col gap-2">
               <Link href="/login" onClick={() => setMobileOpen(false)}>
-                <button className="w-full h-11 rounded-xl text-sm font-bold btn-emerald">
+                <button className="w-full h-11 rounded text-sm font-semibold border-2 border-emerald-500 text-emerald-400 bg-transparent hover:bg-emerald-500 hover:text-white transition-all">
+                  Connexion
+                </button>
+              </Link>
+              <Link href="/login" onClick={() => setMobileOpen(false)}>
+                <button className="w-full h-11 rounded text-sm font-bold bg-emerald-500 text-white border-2 border-emerald-500 hover:bg-emerald-600 transition-all">
                   Accéder au Dashboard
                 </button>
               </Link>
@@ -126,7 +153,6 @@ export function Navbar() {
         </div>
       )}
 
-      {/* Spacer */}
       <div className="h-[68px]" />
     </>
   );
