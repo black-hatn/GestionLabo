@@ -16,7 +16,7 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8)
     first_name: str
     last_name: str
-    role: UserRole = UserRole.USER
+    role: UserRole = UserRole.DOCTOR
 
 
 class UserRead(ORMModel):

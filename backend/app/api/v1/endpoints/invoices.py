@@ -27,7 +27,7 @@ def list_invoices(
     query = select(Invoice)
     count_query = select(func.count()).select_from(Invoice)
 
-    if current_user.role == UserRole.USER:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
         query = query.join(Patient, Invoice.patient_id == Patient.id).where(Patient.email == current_user.email)
         count_query = count_query.join(Patient, Invoice.patient_id == Patient.id).where(Patient.email == current_user.email)
     elif current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
@@ -64,7 +64,7 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    if current_user.role == UserRole.USER:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
         from app.models.patient import Patient
         patient = db.get(Patient, invoice.patient_id)
         if not patient or patient.email != current_user.email:
