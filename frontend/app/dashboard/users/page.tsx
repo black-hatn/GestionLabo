@@ -170,10 +170,10 @@ function UserModal({
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
               disabled={readOnly}
               className="w-full border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
-              style={{ background: "rgba(255,255,255,0.05)" }}
+              style={{ background: "#0f1c2e", color: "#cbd5e1" }}
             >
               {ROLES.map(r => (
-                <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                <option key={r} value={r} style={{ background: "#0f1c2e", color: "#cbd5e1" }}>{ROLE_LABELS[r]}</option>
               ))}
             </select>
           </div>
