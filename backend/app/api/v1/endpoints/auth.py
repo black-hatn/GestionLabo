@@ -44,6 +44,29 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
+@router.post("/seed", response_model=MessageResponse)
+def seed(db: Session = Depends(get_db)):
+    existing = db.scalar(select(User).where(User.email == "nouradinezakariamahamat2@gmail.com"))
+    if existing:
+        return MessageResponse(message="Admin already seeded")
+    import uuid
+    from datetime import datetime
+    user = User(
+        id=str(uuid.uuid4()),
+        email="nouradinezakariamahamat2@gmail.com",
+        password_hash=hash_password("Fatmah2125"),
+        first_name="Nouradine",
+        last_name="Zakaria",
+        role="ADMIN",
+        is_active=True,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(user)
+    db.commit()
+    return MessageResponse(message="Admin seeded successfully")
+
+
 @router.post("/login", response_model=TokenPair)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.scalar(select(User).where(User.email == payload.email))
