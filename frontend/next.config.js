@@ -2,8 +2,11 @@
 const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
-  reactStrictMode: true
-}
+  reactStrictMode: true,
+  experimental: {
+    instrumentationHook: true,
+  },
+};
 
 module.exports = withSentryConfig(nextConfig, {
   silent: true,
@@ -12,4 +15,7 @@ module.exports = withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
   hideSourceMaps: true,
   disableLogger: true,
+  sourcemaps: {
+    disable: true,
+  },
 });

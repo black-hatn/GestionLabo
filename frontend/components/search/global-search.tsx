@@ -73,7 +73,7 @@ export function GlobalSearch() {
           ? ((patientsRes.value.data?.items ?? patientsRes.value.data ?? []) as PatientResult[]).map(
               (p) => ({
                 id:       p.id,
-                label:    p.name ?? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Patient #${p.id.slice(0, 6)}`,
+                label:    (p.name ?? (`${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() || `Patient #${p.id.slice(0, 6)}`)),
                 sublabel: p.record_number ? `Dossier n°${p.record_number}` : "Patient",
                 href:     `/dashboard/patients/${p.id}`,
                 type:     "patient" as const,
