@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+import random
+import string
 
 from app.api.deps import get_current_user
 from app.config.database import get_db
-from app.config.security import create_access_token, create_refresh_token, decode_token, hash_password, verify_password
+from app.config.security import create_access_token, create_refresh_token, create_token, decode_token, hash_password, verify_password
 from app.models.user import User
 from app.schemas.common import MessageResponse
 from app.schemas.domain import LoginRequest, RefreshRequest, TokenPair, UserCreate, UserRead
@@ -18,6 +21,9 @@ class OTPRequest(BaseModel):
 class OTPVerification(BaseModel):
     email: str
     otp: str
+
+# In-memory reset tokens: { email: { "code": "123456", "expires": datetime } }
+_reset_tokens: dict = {}
 
 router = APIRouter()
 
@@ -130,3 +136,77 @@ def verify_otp(payload: OTPVerification, db: Session = Depends(get_db)):
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
     )
+
+
+# ── Password Reset ────────────────────────────────────────────────────────────
+
+class PasswordResetRequestBody(BaseModel):
+    email: str
+
+class PasswordResetVerifyBody(BaseModel):
+    email: str
+    code: str
+
+class PasswordResetConfirmBody(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/password-reset-request")
+def password_reset_request(body: PasswordResetRequestBody, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.email == body.email))
+    if user:
+        code = "".join(random.choices(string.digits, k=6))
+        _reset_tokens[body.email] = {
+            "code": code,
+            "expires": datetime.utcnow() + timedelta(minutes=15),
+        }
+        # Send email (graceful fail)
+        try:
+            from app.utils.email_service import send_email
+            send_email(
+                to=body.email,
+                subject="Code de réinitialisation — NovaBio Lab",
+                html_body=f"<p>Votre code de réinitialisation est : <strong>{code}</strong></p><p>Valable 15 minutes.</p>",
+            )
+        except Exception:
+            pass
+    return {"message": "Si cette adresse existe, un code a été envoyé."}
+
+
+@router.post("/password-reset-verify")
+def password_reset_verify(body: PasswordResetVerifyBody):
+    token_data = _reset_tokens.get(body.email)
+    if not token_data or token_data["expires"] < datetime.utcnow():
+        raise HTTPException(status_code=400, detail="Code invalide ou expiré")
+    if token_data["code"] != body.code:
+        raise HTTPException(status_code=400, detail="Code incorrect")
+    # Issue a short-lived reset token (type="reset")
+    reset_token = create_token(
+        subject=body.email,
+        token_type="reset",
+        expires_delta=timedelta(minutes=15),
+    )
+    return {"valid": True, "token": reset_token}
+
+
+@router.post("/password-reset-confirm")
+def password_reset_confirm(body: PasswordResetConfirmBody, db: Session = Depends(get_db)):
+    from jose import JWTError
+    from app.config.settings import get_settings
+    _settings = get_settings()
+    try:
+        from jose import jwt
+        payload = jwt.decode(body.token, _settings.SECRET_KEY, algorithms=[_settings.ALGORITHM])
+        if payload.get("type") != "reset":
+            raise HTTPException(status_code=400, detail="Token invalide")
+        email = payload.get("sub")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Token invalide ou expiré")
+    user = db.scalar(select(User).where(User.email == email))
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    _reset_tokens.pop(email, None)
+    return {"message": "Mot de passe réinitialisé avec succès"}

@@ -156,7 +156,7 @@ export default function LoginPage() {
                   <label className="block text-xs font-semibold uppercase tracking-wide" style={{ color: "#94a3b8" }}>
                     Mot de passe
                   </label>
-                  <Link href="#" className="text-xs font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">
+                  <Link href="/reset-password" className="text-xs font-semibold text-emerald-500 hover:text-emerald-400 transition-colors">
                     Oublié ?
                   </Link>
                 </div>

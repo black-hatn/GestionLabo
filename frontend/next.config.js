@@ -1,7 +1,15 @@
 /** @type {import('next').NextConfig} */
+const { withSentryConfig } = require("@sentry/nextjs");
+
 const nextConfig = {
   reactStrictMode: true
 }
 
-module.exports = nextConfig
-
+module.exports = withSentryConfig(nextConfig, {
+  silent: true,
+  org: "novabio-lab",
+  project: "novabio-frontend",
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+});

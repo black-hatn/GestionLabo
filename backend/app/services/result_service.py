@@ -10,8 +10,11 @@ from app.models.exam import Exam
 from app.models.user import User
 from app.schemas.domain import ResultCreate, ResultRead
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timedelta, date
 import math
+import time
+from app.utils.email_service import send_result_notification
+from app.models.invoice import Invoice as InvoiceModel
 
 
 def _enrich_result(db: Session, result: Result) -> dict:
@@ -44,6 +47,41 @@ def _enrich_result(db: Session, result: Result) -> dict:
         base["tested_by_name"] = result.tested_by
 
     return base
+
+
+def _auto_invoice(db: Session, result: Result, exam_request: ExamRequest | None) -> None:
+    """
+    Auto-generate a BROUILLON invoice when a result is created or marked CRITIQUE.
+    Skips creation if a BROUILLON invoice already exists for the patient within the last 7 days.
+    All errors are swallowed so the main operation is never blocked.
+    """
+    try:
+        if exam_request is None:
+            return
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        existing = db.query(InvoiceModel).filter(
+            InvoiceModel.patient_id == exam_request.patient_id,
+            InvoiceModel.created_at >= week_ago,
+            InvoiceModel.status == "BROUILLON",
+        ).first()
+        if not existing:
+            auto_invoice = InvoiceModel(
+                patient_id=exam_request.patient_id,
+                invoice_number=f"AUTO-{int(time.time())}",
+                total_amount=5000.0,
+                paid_amount=0.0,
+                status="BROUILLON",
+                issue_date=date.today(),
+                due_date=date.today() + timedelta(days=30),
+            )
+            db.add(auto_invoice)
+            db.commit()
+            db.refresh(auto_invoice)
+            print(f"[AUTO-INVOICE] Created {auto_invoice.invoice_number} for patient {exam_request.patient_id}")
+        else:
+            print(f"[AUTO-INVOICE] Skipped — BROUILLON invoice {existing.invoice_number} already exists for patient {exam_request.patient_id}")
+    except Exception as e:
+        print(f"[AUTO-INVOICE-ERROR] {e}")
 
 
 class ResultService:
@@ -85,6 +123,28 @@ class ResultService:
             er.status = ExamRequestStatus.TERMINE
         db.commit()
         db.refresh(db_result)
+
+        # Auto-generate invoice when a result is created (exam is now complete)
+        _auto_invoice(db, db_result, er)
+
+        # Send email notification (graceful — never raises)
+        try:
+            status_val = result_create.status
+            if hasattr(status_val, "value"):
+                status_val = status_val.value
+            if status_val in ("TERMINE", "CRITIQUE") and er:
+                patient = db.query(Patient).filter(Patient.id == er.patient_id).first()
+                exam = db.query(Exam).filter(Exam.id == er.exam_id).first()
+                if patient and patient.email and exam:
+                    send_result_notification(
+                        patient_email=patient.email,
+                        patient_name=f"{patient.first_name} {patient.last_name}",
+                        exam_type=exam.name,
+                        status=status_val,
+                        result_id=str(db_result.id),
+                    )
+        except Exception as exc:
+            print(f"[EMAIL-HOOK] create_result notification skipped: {exc}")
         return _enrich_result(db, db_result)
 
     @staticmethod
@@ -115,6 +175,37 @@ class ResultService:
 
         db.commit()
         db.refresh(result)
+
+        # Auto-generate invoice when result is marked CRITIQUE on update
+        if result_update.status is not None:
+            updated_status = result_update.status
+            if hasattr(updated_status, "value"):
+                updated_status = updated_status.value
+            if updated_status == "CRITIQUE":
+                er_for_invoice = db.query(ExamRequest).filter(ExamRequest.id == result.exam_request_id).first()
+                _auto_invoice(db, result, er_for_invoice)
+
+        # Send email notification on status change (graceful — never raises)
+        try:
+            if result_update.status is not None:
+                status_val = result_update.status
+                if hasattr(status_val, "value"):
+                    status_val = status_val.value
+                if status_val in ("TERMINE", "CRITIQUE"):
+                    er = db.query(ExamRequest).filter(ExamRequest.id == result.exam_request_id).first()
+                    if er:
+                        patient = db.query(Patient).filter(Patient.id == er.patient_id).first()
+                        exam = db.query(Exam).filter(Exam.id == er.exam_id).first()
+                        if patient and patient.email and exam:
+                            send_result_notification(
+                                patient_email=patient.email,
+                                patient_name=f"{patient.first_name} {patient.last_name}",
+                                exam_type=exam.name,
+                                status=status_val,
+                                result_id=str(result.id),
+                            )
+        except Exception as exc:
+            print(f"[EMAIL-HOOK] update_result notification skipped: {exc}")
         return _enrich_result(db, result)
 
     @staticmethod

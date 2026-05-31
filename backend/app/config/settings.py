@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,6 +21,13 @@ class Settings(BaseSettings):
     USE_SQLITE_DEV: bool = True
 
     CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+
+    SMTP_HOST: str = Field(default="smtp.gmail.com")
+    SMTP_PORT: int = Field(default=587)
+    SMTP_USER: Optional[str] = Field(default=None)
+    SMTP_PASSWORD: Optional[str] = Field(default=None)
+    SMTP_FROM: Optional[str] = Field(default=None)
+    SMTP_ENABLED: bool = Field(default=False)
 
 
 @lru_cache

@@ -30,8 +30,9 @@ const NAV_ITEMS: {
 ];
 
 const ADMIN_ITEMS = [
-  { label: "Panneau Admin",        href: "/dashboard/admin",  icon: Shield },
-  { label: "Gestion Utilisateurs", href: "/dashboard/users",  icon: ShieldCheck },
+  { label: "Panneau Admin",        href: "/dashboard/admin",       icon: Shield },
+  { label: "Gestion Utilisateurs", href: "/dashboard/users",       icon: ShieldCheck },
+  { label: "Journal d'Audit",      href: "/dashboard/audit-logs",  icon: Shield },
 ];
 
 const BOTTOM_ITEMS = [

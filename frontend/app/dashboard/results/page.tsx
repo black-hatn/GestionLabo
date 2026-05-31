@@ -12,9 +12,15 @@ import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/lib/auth-store";
-import resultService, { type ResultItem, type ResultStatus } from "@/services/api/result";
+import { type ResultItem, type ResultStatus } from "@/services/api/result";
 import examRequestService from "@/services/api/exam-request";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
+import {
+  useResults,
+  useCreateResult,
+  useUpdateResult,
+  useDeleteResult,
+} from "@/hooks/queries/use-results";
 
 // Lazy-load le composant PDF (bundle volumineux — chargement à la demande)
 const DownloadResultPDFButton = dynamic(
@@ -292,40 +298,31 @@ export default function ResultsPage() {
   const canEdit   = ["ADMIN", "LAB_TECH"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";
 
-  const [results, setResults]       = useState<ResultItem[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [loadError, setLoadError]   = useState<string | null>(null);
   const [page, setPage]             = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal]           = useState(0);
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | ResultStatus>("ALL");
 
   // Modal state
-  const [modal, setModal]   = useState<ModalState>({ type: "idle" });
-  const [saving, setSaving] = useState(false);
+  const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
 
   // Exam requests for the create form dropdown
   const [examRequests, setExamRequests] = useState<{ id: string; label: string }[]>([]);
 
-  const loadResults = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-      const res = await resultService.getResults(page, 10);
-      setResults(res.items ?? []);
-      setTotalPages(res.pages ?? 1);
-      setTotal(res.total ?? 0);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setLoadError(e?.response?.data?.detail ?? e?.message ?? "Erreur de chargement");
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
+  // ── React Query hooks ───────────────────────────────────────────────────
+  const { data, isLoading, isFetching, isError, error, refetch } = useResults(page, 10);
+  const createResult = useCreateResult();
+  const updateResult = useUpdateResult();
+  const deleteResult = useDeleteResult();
 
-  useEffect(() => { loadResults(); }, [loadResults]);
+  const results    = data?.items ?? [];
+  const totalPages = data?.pages ?? 1;
+  const total      = data?.total ?? 0;
+
+  const loading = isLoading || isFetching;
+  const loadError = isError
+    ? ((error as any)?.response?.data?.detail ?? (error as any)?.message ?? "Erreur de chargement")
+    : null;
 
   // Load exam requests for the form dropdown (EN_ATTENTE ou EN_COURS)
   const loadExamRequests = useCallback(async () => {
@@ -347,44 +344,38 @@ export default function ResultsPage() {
   const openDelete = (r: ResultItem) => setModal({ type: "delete", result: r });
   const closeModal = () => { setModal({ type: "idle" }); setFormError(null); };
 
-  const handleSubmit = async (data: Parameters<FormDialogProps["onSubmit"]>[0]) => {
-    setSaving(true);
+  const handleSubmit = (data: Parameters<FormDialogProps["onSubmit"]>[0]) => {
     setFormError(null);
-    try {
-      if (modal.type === "create") {
-        await resultService.createResult(data);
-      } else if (modal.type === "edit") {
-        await resultService.updateResult(modal.result.id, {
+    if (modal.type === "create") {
+      createResult.mutate(data, {
+        onSuccess: closeModal,
+        onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+      });
+    } else if (modal.type === "edit") {
+      updateResult.mutate({
+        id: modal.result.id,
+        data: {
           value: data.value,
           reference_value: data.reference_value,
           status: data.status,
           notes: data.notes,
-        });
-      }
-      closeModal();
-      loadResults();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur");
-    } finally {
-      setSaving(false);
+        },
+      }, {
+        onSuccess: closeModal,
+        onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+      });
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (modal.type !== "delete") return;
-    setSaving(true);
-    try {
-      await resultService.deleteResult(modal.result.id);
-      closeModal();
-      loadResults();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur");
-    } finally {
-      setSaving(false);
-    }
+    deleteResult.mutate(modal.result.id, {
+      onSuccess: closeModal,
+      onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+    });
   };
+
+  const saving = createResult.isPending || updateResult.isPending || deleteResult.isPending;
 
   // Filtering (client-side on current page)
   const filtered = results.filter(r => {
@@ -476,7 +467,7 @@ export default function ResultsPage() {
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" onClick={loadResults} disabled={loading} className="btn-ghost h-10 px-4 gap-2">
+            <Button variant="outline" onClick={() => refetch()} disabled={loading} className="btn-ghost h-10 px-4 gap-2">
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Actualiser
             </Button>

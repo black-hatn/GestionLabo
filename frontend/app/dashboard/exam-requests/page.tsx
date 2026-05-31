@@ -9,11 +9,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import examRequestService, { type ExamRequest, type ExamRequestStatus } from "@/services/api/exam-request";
+import { type ExamRequest, type ExamRequestStatus } from "@/services/api/exam-request";
 import patientService, { type Patient } from "@/services/api/patient";
 import examService from "@/services/api/exam";
 import { useAuthStore } from "@/lib/auth-store";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
+import {
+  useExamRequests,
+  useCreateExamRequest,
+  useUpdateExamRequestStatus,
+  useDeleteExamRequest,
+} from "@/hooks/queries/use-exam-requests";
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 const STATUS_CFG: Record<ExamRequestStatus, { label: string; cls: string; icon: React.ElementType }> = {
@@ -240,39 +246,30 @@ export default function ExamRequestsPage() {
   const canCreate = ["ADMIN", "RECEPTIONIST"].includes(role);
   const canDelete = role === "ADMIN";
 
-  const [requests, setRequests]     = useState<ExamRequest[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [loadError, setLoadError]   = useState<string | null>(null);
   const [page, setPage]             = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal]           = useState(0);
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | ExamRequestStatus>("ALL");
 
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
-  const [saving, setSaving]       = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const [patientOptions, setPatientOptions] = useState<{ id: string; label: string }[]>([]);
   const [examOptions, setExamOptions]       = useState<{ id: string; label: string }[]>([]);
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-      const res = await examRequestService.getExamRequests(page, 10);
-      setRequests(res.items ?? []);
-      setTotalPages(res.pages ?? 1);
-      setTotal(res.total ?? 0);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setLoadError(e?.response?.data?.detail ?? e?.message ?? "Erreur de chargement");
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
+  // ── React Query hooks ───────────────────────────────────────────────────
+  const { data, isLoading, isFetching, isError, error, refetch } = useExamRequests(page, 10);
+  const createExamRequest      = useCreateExamRequest();
+  const updateExamRequestStatus = useUpdateExamRequestStatus();
+  const deleteExamRequest      = useDeleteExamRequest();
 
-  useEffect(() => { loadRequests(); }, [loadRequests]);
+  const requests   = data?.items ?? [];
+  const totalPages = data?.pages ?? 1;
+  const total      = data?.total ?? 0;
+
+  const loading = isLoading || isFetching;
+  const loadError = isError
+    ? ((error as any)?.response?.data?.detail ?? (error as any)?.message ?? "Erreur de chargement")
+    : null;
 
   const loadDropdowns = useCallback(async () => {
     try {
@@ -296,43 +293,29 @@ export default function ExamRequestsPage() {
   const openDelete = (er: ExamRequest) => setModal({ type: "delete", er });
   const closeModal = () => { setModal({ type: "idle" }); setFormError(null); };
 
-  const handleCreate = async (data: any) => {
-    setSaving(true);
+  const handleCreate = (data: any) => {
     setFormError(null);
-    try {
-      await examRequestService.createExamRequest(data);
-      closeModal();
-      loadRequests();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur");
-    } finally {
-      setSaving(false);
-    }
+    createExamRequest.mutate(data, {
+      onSuccess: closeModal,
+      onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+    });
   };
 
-  const handleStatusChange = async (id: string, status: ExamRequestStatus) => {
-    try {
-      await examRequestService.updateStatus(id, status);
-      closeModal();
-      loadRequests();
-    } catch { /* ignore */ }
+  const handleStatusChange = (id: string, status: ExamRequestStatus) => {
+    updateExamRequestStatus.mutate({ id, status }, {
+      onSuccess: closeModal,
+    });
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (modal.type !== "delete") return;
-    setSaving(true);
-    try {
-      await examRequestService.deleteExamRequest(modal.er.id);
-      closeModal();
-      loadRequests();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur");
-    } finally {
-      setSaving(false);
-    }
+    deleteExamRequest.mutate(modal.er.id, {
+      onSuccess: closeModal,
+      onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+    });
   };
+
+  const saving = createExamRequest.isPending || updateExamRequestStatus.isPending || deleteExamRequest.isPending;
 
   const filtered = requests.filter(r => {
     const q = search.toLowerCase();
@@ -409,7 +392,7 @@ export default function ExamRequestsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 dark:text-slate-500 text-slate-400" />
                 <Input placeholder="Rechercher par patient, examen, ID…" value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
               </div>
-              <Button variant="outline" onClick={loadRequests} disabled={loading} className="btn-ghost h-10 px-4 gap-2">
+              <Button variant="outline" onClick={() => refetch()} disabled={loading} className="btn-ghost h-10 px-4 gap-2">
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 Actualiser
               </Button>

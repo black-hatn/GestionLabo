@@ -3,7 +3,8 @@
 
 import { useAuthStore } from "@/lib/auth-store";
 import { useToastStore } from "@/lib/toast-store";
-import { LogOut, Bell, Search, Activity, Zap, AlertTriangle } from "lucide-react";
+import { LogOut, Bell, Activity, Zap, AlertTriangle } from "lucide-react";
+import { GlobalSearch } from "@/components/search/global-search";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
@@ -99,14 +100,8 @@ export function Navbar() {
       </div>
 
       {/* Center: Search */}
-      <div className="hidden md:flex items-center gap-2 rounded-xl border border-white/[0.07] px-3.5 py-2 w-72 focus-within:border-emerald-500/40 focus-within:bg-emerald-500/[0.03] transition-all" style={{ background: "rgba(255,255,255,0.02)" }}>
-        <Search className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-        <input
-          type="text"
-          placeholder="Rechercher patient, examen..."
-          className="bg-transparent border-none p-0 text-sm text-slate-300 focus:outline-none w-full placeholder-slate-600"
-        />
-        <kbd className="text-[10px] font-semibold text-slate-600 border border-white/[0.08] rounded px-1.5 py-0.5 hidden sm:block">⌘K</kbd>
+      <div className="hidden md:flex">
+        <GlobalSearch />
       </div>
 
       {/* Right: actions */}

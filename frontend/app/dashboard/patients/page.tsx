@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useAuthStore } from "@/lib/auth-store";
 import {
   Plus, Search, Edit2, Trash2, Eye, Loader2, AlertCircle,
@@ -11,8 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import patientService, { type Patient } from "@/services/api/patient";
+import { type Patient } from "@/services/api/patient";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
+import {
+  usePatients,
+  useCreatePatient,
+  useUpdatePatient,
+  useDeletePatient,
+} from "@/hooks/queries/use-patients";
 
 // ── Patient Form Dialog ────────────────────────────────────────────────────
 interface PatientFormProps {
@@ -255,17 +261,11 @@ type ModalState =
   | { type: "delete"; patient: Patient };
 
 export default function PatientsPage() {
-  const [patients, setPatients]     = useState<Patient[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [loadError, setLoadError]   = useState<string | null>(null);
-  const [page, setPage]             = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal]           = useState(0);
-  const [search, setSearch]         = useState("");
-  const [viewMode, setViewMode]     = useState<"grid" | "table">("grid");
+  const [page, setPage]         = useState(1);
+  const [search, setSearch]     = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
-  const [modal, setModal]   = useState<ModalState>({ type: "idle" });
-  const [saving, setSaving] = useState(false);
+  const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
 
   const user = useAuthStore(state => state.user);
@@ -273,23 +273,20 @@ export default function PatientsPage() {
   const canEdit   = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";
 
-  const loadPatients = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-      const res = await patientService.getPatients(page, 12, search);
-      setPatients(res.items ?? []);
-      setTotalPages(res.pages ?? 1);
-      setTotal(res.total ?? 0);
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setLoadError(e?.response?.data?.detail ?? e?.message ?? "Erreur de chargement");
-    } finally {
-      setLoading(false);
-    }
-  }, [page, search]);
+  // ── React Query hooks ───────────────────────────────────────────────────
+  const { data, isLoading, isFetching, isError, error, refetch } = usePatients(page, 12);
+  const createPatient = useCreatePatient();
+  const updatePatient = useUpdatePatient();
+  const deletePatient = useDeletePatient();
 
-  useEffect(() => { loadPatients(); }, [loadPatients]);
+  const patients   = data?.items ?? [];
+  const totalPages = data?.pages ?? 1;
+  const total      = data?.total ?? 0;
+
+  const loading = isLoading || isFetching;
+  const loadError = isError
+    ? ((error as any)?.response?.data?.detail ?? (error as any)?.message ?? "Erreur de chargement")
+    : null;
 
   const openCreate = () => { setFormError(null); setModal({ type: "create" }); };
   const openEdit   = (p: Patient) => { setFormError(null); setModal({ type: "edit", patient: p }); };
@@ -297,39 +294,30 @@ export default function PatientsPage() {
   const openDelete = (p: Patient) => setModal({ type: "delete", patient: p });
   const closeModal = () => { setModal({ type: "idle" }); setFormError(null); };
 
-  const handleSubmit = async (data: any) => {
-    setSaving(true);
+  const handleSubmit = (data: any) => {
     setFormError(null);
-    try {
-      if (modal.type === "create") {
-        await patientService.createPatient(data);
-      } else if (modal.type === "edit") {
-        await patientService.updatePatient(modal.patient.id, data);
-      }
-      closeModal();
-      loadPatients();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur");
-    } finally {
-      setSaving(false);
+    if (modal.type === "create") {
+      createPatient.mutate(data, {
+        onSuccess: closeModal,
+        onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+      });
+    } else if (modal.type === "edit") {
+      updatePatient.mutate({ id: modal.patient.id, data }, {
+        onSuccess: closeModal,
+        onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
+      });
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (modal.type !== "delete") return;
-    setSaving(true);
-    try {
-      await patientService.deletePatient(modal.patient.id);
-      closeModal();
-      loadPatients();
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { detail?: string } }; message?: string };
-      setFormError(e?.response?.data?.detail ?? e?.message ?? "Erreur lors de la suppression");
-    } finally {
-      setSaving(false);
-    }
+    deletePatient.mutate(modal.patient.id, {
+      onSuccess: closeModal,
+      onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur lors de la suppression"),
+    });
   };
+
+  const saving = createPatient.isPending || updatePatient.isPending || deletePatient.isPending;
 
   const initials = (p: Patient) =>
     `${p.first_name[0]}${p.last_name[0]}`.toUpperCase();
@@ -366,7 +354,7 @@ export default function PatientsPage() {
                 />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={loadPatients} disabled={loading} className="btn-ghost h-10 px-3">
+                <Button variant="outline" onClick={() => refetch()} disabled={loading} className="btn-ghost h-10 px-3">
                   <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 </Button>
                 <Button variant="outline" onClick={() => setViewMode(v => v === "grid" ? "table" : "grid")} className="btn-ghost h-10 px-3">
