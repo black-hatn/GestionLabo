@@ -67,12 +67,24 @@ const LAB_TECH_PERMISSIONS: RolePermissions = {
   all: { read: false, create: false, update: false, delete: false },
 };
 
-const USER_PERMISSIONS: RolePermissions = {
-  patients: { read: true, create: false, update: false, delete: false },
+const RECEPTIONIST_PERMISSIONS: RolePermissions = {
+  patients: { read: true, create: true, update: true, delete: false },
   exams: { read: true, create: false, update: false, delete: false },
   results: { read: true, create: false, update: false, delete: false },
-  invoices: { read: true, create: false, update: false, delete: false },
-  payments: { read: true, create: false, update: false, delete: false },
+  invoices: { read: true, create: true, update: true, delete: false },
+  payments: { read: true, create: true, update: false, delete: false },
+  users: { read: false, create: false, update: false, delete: false },
+  settings: { read: false, create: false, update: false, delete: false },
+  analytics: { read: false, create: false, update: false, delete: false },
+  all: { read: false, create: false, update: false, delete: false },
+};
+
+const COLLECTOR_PERMISSIONS: RolePermissions = {
+  patients: { read: true, create: false, update: false, delete: false },
+  exams: { read: true, create: false, update: true, delete: false },
+  results: { read: true, create: false, update: false, delete: false },
+  invoices: { read: false, create: false, update: false, delete: false },
+  payments: { read: false, create: false, update: false, delete: false },
   users: { read: false, create: false, update: false, delete: false },
   settings: { read: false, create: false, update: false, delete: false },
   analytics: { read: false, create: false, update: false, delete: false },
@@ -80,14 +92,27 @@ const USER_PERMISSIONS: RolePermissions = {
 };
 
 const PERMISSIONS_MAP: Record<UserRole, RolePermissions> = {
-  ADMIN: ADMIN_PERMISSIONS,
-  DOCTOR: DOCTOR_PERMISSIONS,
-  LAB_TECH: LAB_TECH_PERMISSIONS,
-  USER: USER_PERMISSIONS,
+  ADMIN:        ADMIN_PERMISSIONS,
+  RECEPTIONIST: RECEPTIONIST_PERMISSIONS,
+  COLLECTOR:    COLLECTOR_PERMISSIONS,
+  LAB_TECH:     LAB_TECH_PERMISSIONS,
+  DOCTOR:       DOCTOR_PERMISSIONS,
+};
+
+const NO_ACCESS: RolePermissions = {
+  patients: { read: false, create: false, update: false, delete: false },
+  exams: { read: false, create: false, update: false, delete: false },
+  results: { read: false, create: false, update: false, delete: false },
+  invoices: { read: false, create: false, update: false, delete: false },
+  payments: { read: false, create: false, update: false, delete: false },
+  users: { read: false, create: false, update: false, delete: false },
+  settings: { read: false, create: false, update: false, delete: false },
+  analytics: { read: false, create: false, update: false, delete: false },
+  all: { read: false, create: false, update: false, delete: false },
 };
 
 export function getPermissions(role: UserRole): RolePermissions {
-  return PERMISSIONS_MAP[role] || USER_PERMISSIONS;
+  return PERMISSIONS_MAP[role] ?? NO_ACCESS;
 }
 
 export function canAccess(role: UserRole, resource: keyof RolePermissions, action: keyof Permission): boolean {
