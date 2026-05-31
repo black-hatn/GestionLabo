@@ -59,12 +59,8 @@ class AuthService {
 
     const tokens: AuthTokens = await response.json();
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(this.TOKEN_KEY, tokens.access_token);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refresh_token);
-    }
-
     // Fetch full user profile (with role) immediately after login
+    let userData: User | null = null;
     try {
       const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
@@ -74,21 +70,24 @@ class AuthService {
         }
       });
       if (userResponse.ok) {
-        const userData: User = await userResponse.json();
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('user', JSON.stringify({
-            id: userData.id,
-            email: userData.email,
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role,
-            is_active: userData.is_active,
-          }));
-        }
+        userData = await userResponse.json();
       }
     } catch (_) {
-      // Non-blocking: role-based UI will degrade gracefully
+      // Non-blocking: will degrade gracefully
     }
+
+    // ── Hydrater le store Zustand (source de vérité unique) ──
+    // useAuthStore.getState() fonctionne en dehors des composants React
+    const { useAuthStore } = await import('@/lib/auth-store');
+    const { UserRole } = await import('@/lib/permissions') as any;
+    useAuthStore.getState().login(tokens.access_token, {
+      id:         userData?.id         || '',
+      email:      userData?.email      || email,
+      first_name: userData?.first_name,
+      last_name:  userData?.last_name,
+      role:       (userData?.role as any) || 'RECEPTIONIST',
+      is_active:  userData?.is_active  !== false,
+    });
 
     return tokens;
   }
