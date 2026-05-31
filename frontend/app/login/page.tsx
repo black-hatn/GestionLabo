@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthService from "@/services/auth";
-import { Activity, Eye, EyeOff, AlertCircle, ShieldCheck, ArrowRight, Lock } from "lucide-react";
+import { Activity, Eye, EyeOff, AlertCircle, ShieldCheck, ArrowRight, Lock, ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -86,6 +86,15 @@ export default function LoginPage() {
         {/* Subtle right-side ambient */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/[0.06] rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-teal-500/[0.05] rounded-full blur-3xl" />
+
+        {/* Back to site — top-left of right panel */}
+        <Link
+          href="/"
+          className="absolute top-5 left-5 flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-emerald-400 transition-colors group"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          Retour au site
+        </Link>
 
         <div className="w-full max-w-[420px] animate-fade-in relative z-10">
           {/* Mobile logo */}
