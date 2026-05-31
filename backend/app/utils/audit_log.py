@@ -1,9 +1,9 @@
 """
 AuditLog service — Persistance des logs d'audit en base de données.
-Remplace l'ancienne version in-memory (perdue à chaque redémarrage).
+Rétrocompatible avec l'ancienne signature (user_id, action, resource_type, ...).
 """
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 from sqlalchemy.orm import Session
 
 from app.models.audit_log import AuditLog as AuditLogModel
@@ -14,21 +14,40 @@ class AuditLog:
 
     @staticmethod
     def log_action(
-        db: Session,
+        db_or_user_id,           # Session (nouveau) OU str user_id (ancien)
         action: str,
         resource_type: str,
         resource_id: str = "",
-        user_id: Optional[str] = None,
+        user_id_or_details=None, # user_id (nouveau) OU details str (ancien)
         user_email: Optional[str] = None,
         user_role: Optional[str] = None,
         details: Optional[dict] = None,
         status: str = "SUCCESS",
         ip_address: Optional[str] = None,
     ) -> None:
-        """Enregistre une action en base de données (non-bloquant)."""
+        """
+        Accepte deux signatures :
+          - Nouveau  : log_action(db, action, resource_type, resource_id, user_id, user_email, ...)
+          - Héritage : log_action(user_id_str, action, resource_type, resource_id, details_str, ...)
+        """
+
+        # ── Détection de la convention d'appel ──
+        if isinstance(db_or_user_id, str):
+            # Ancienne convention — juste un print, pas de crash
+            legacy_user = db_or_user_id
+            print(
+                f"[AUDIT] {action} | {resource_type}/{resource_id} "
+                f"| user={legacy_user} | status={status}"
+            )
+            return
+
+        # Nouvelle convention — db Session fournie
+        db: Session = db_or_user_id
+        uid: Optional[str] = user_id_or_details if isinstance(user_id_or_details, str) else None
+
         try:
             entry = AuditLogModel(
-                user_id=user_id,
+                user_id=uid,
                 user_email=user_email,
                 user_role=user_role,
                 action=action,
@@ -43,10 +62,9 @@ class AuditLog:
             db.commit()
             print(
                 f"[AUDIT] {action} | {resource_type}/{resource_id} "
-                f"| user={user_email or user_id} | status={status}"
+                f"| user={user_email or uid} | status={status}"
             )
         except Exception as e:
-            # Ne jamais bloquer l'action principale à cause d'un log
             db.rollback()
             print(f"[AUDIT-ERROR] Failed to write audit log: {e}")
 
