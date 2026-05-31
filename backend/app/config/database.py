@@ -1,22 +1,25 @@
-"""Configuration de la base de données SQLAlchemy"""
+from collections.abc import Generator
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from app.config.settings import settings
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
-DATABASE_URL = settings.DATABASE_URL
+from app.config.settings import get_settings
 
-# SQLite needs check_same_thread=False; PostgreSQL does not need it
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+settings = get_settings()
+database_url = settings.DATABASE_URL_SQLITE if settings.USE_SQLITE_DEV else settings.DATABASE_URL
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
-
+engine = create_engine(
+    database_url,
+    pool_pre_ping=True,
+    connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 
-def get_db():
-    """Dépendance pour obtenir une session de base de données"""
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db

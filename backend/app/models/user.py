@@ -1,25 +1,30 @@
-"""Modèle UTILISATEUR"""
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+import enum
+import uuid
 from datetime import datetime
+from sqlalchemy import DateTime, Enum, String, Boolean
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.config.database import Base
 
 
+class UserRole(str, enum.Enum):
+    ADMIN = "ADMIN"
+    DOCTOR = "DOCTOR"
+    LAB_TECH = "LAB_TECH"
+    USER = "USER"
+
+
 class User(Base):
-    """Table UTILISATEUR - Comptes utilisateurs"""
-    __tablename__ = "utilisateur"
-    
-    id_utilisateur = Column(Integer, primary_key=True, index=True)
-    identifiant = Column(String(50), unique=True, nullable=False, index=True)
-    mot_de_passe = Column(String(255), nullable=False)  # hash bcrypt
-    nom = Column(String(100), nullable=False)
-    prenom = Column(String(100), nullable=False)
-    email = Column(String(100), nullable=True, index=True)
-    date_creation = Column(DateTime, default=datetime.utcnow)
-    actif = Column(Boolean, default=True)
-    id_role = Column(Integer, ForeignKey("role.id_role"), nullable=False)
-    
-    role = relationship("Role")
-    
-    def __repr__(self):
-        return f"<User(id={self.id_utilisateur}, identifiant={self.identifiant})>"
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )

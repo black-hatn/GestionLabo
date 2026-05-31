@@ -1,10 +1,8 @@
-"""Modèles SQLAlchemy"""
-from app.models.role import Role
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.patient import Patient
-from app.models.medecin import Medecin
-from app.models.examen import Examen
-from app.models.demande import Demande
-from app.models.resultat import Resultat
+from app.models.exam import Exam
+from app.models.exam_request import ExamRequest, ExamRequestStatus
+from app.models.result import Result, ResultStatus
+from app.models.invoice import Invoice, InvoiceStatus
+from app.models.payment import Payment, PaymentMethod
 
-__all__ = ["Role", "User", "Patient", "Medecin", "Examen", "Demande", "Resultat"]

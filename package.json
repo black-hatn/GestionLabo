@@ -1,0 +1,13 @@
+{
+  "name": "laboratoire-examens",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

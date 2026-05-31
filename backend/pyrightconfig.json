@@ -1,8 +1,0 @@
-{
-  "venvPath": "/home/userxn/Documents/Genie Logiciel/laboratoire-examens/backend",
-  "venv": "venv",
-  "pythonVersion": "3.14",
-  "extraPaths": [
-    "/home/userxn/.local/lib/python3.14/site-packages"
-  ]
-}

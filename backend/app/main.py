@@ -1,55 +1,41 @@
-"""Point d'entrée FastAPI"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config.settings import settings
-from app.config.database import engine, Base
-from app.api.routes import auth, patient, examen, demande, resultat, medecin
+from app.config.database import Base, engine
+from app.api.v1.router import api_router
 
-# Créer les tables
 Base.metadata.create_all(bind=engine)
 
-# Créer l'application
 app = FastAPI(
-    title="Gestion des examens de laboratoire",
-    description="API pour la gestion des examens de laboratoire",
+    title="Laboratoire Examens API",
+    description="API pour gérer les examens de laboratoire",
     version="1.0.0"
 )
 
-# Ajouter CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3004",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Inclure les routes
-app.include_router(auth.router)
-app.include_router(patient.router)
-app.include_router(examen.router)
-app.include_router(demande.router)
-app.include_router(resultat.router)
-app.include_router(medecin.router)
-
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
-def read_root():
-    """Route de bienvenue"""
-    return {"message": "Bienvenue sur l'API Laboratoire"}
-
+def root():
+    return {"message": "Bienvenue à l'API Laboratoire Examens", "docs": "/docs", "redoc": "/redoc"}
 
 @app.get("/health")
-def health_check():
-    """Health check"""
-    return {"status": "ok"}
-
+def health():
+    return {"status": "OK"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "app.main:app",
-        host=settings.API_HOST,
-        port=settings.API_PORT,
-        reload=settings.API_RELOAD
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

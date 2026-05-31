@@ -1,36 +1,27 @@
-"""Configuration et variables d'environnement"""
-from pydantic_settings import BaseSettings
-from typing import List
+from functools import lru_cache
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Configuration de l'application"""
-    
-    # Database — SQLite par défaut (dev), override via DATABASE_URL dans .env pour PostgreSQL
-    DATABASE_URL: str = "sqlite:///./laboratoire.db"
-    SQLALCHEMY_ECHO: bool = False
-    
-    # JWT
-    SECRET_KEY: str = "your-super-secret-key-change-this-in-production"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    APP_NAME: str = "Laboratoire Examens API"
+    API_PREFIX: str = "/api/v1"
+    DEBUG: bool = True
+
+    SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
-    
-    # API
-    API_HOST: str = "0.0.0.0"
-    API_PORT: int = 8000
-    API_RELOAD: bool = True
-    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]
-    
-    # Fichiers
-    UPLOAD_DIR: str = "./uploads"
-    PDF_DIR: str = "./pdfs"
-    
-    # Logs
-    LOG_LEVEL: str = "INFO"
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480   # 8 heures
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/laboratoire_examens"
+    DATABASE_URL_SQLITE: str = "sqlite:///./laboratoire_examens.db"
+    USE_SQLITE_DEV: bool = True
+
+    CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
