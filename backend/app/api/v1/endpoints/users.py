@@ -19,7 +19,7 @@ class UserCreate(BaseModel):
     password: str
     first_name: str
     last_name: str
-    role: str = "USER"
+    role: str = "DOCTOR"
     is_active: bool = True
 
 

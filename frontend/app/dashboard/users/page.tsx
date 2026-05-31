@@ -15,18 +15,20 @@ import userService, { UserData, UserCreatePayload } from "@/services/api/user";
 // ── Types ──────────────────────────────────────────────────────────────────
 type ModalMode = "create" | "edit" | "view" | null;
 
-const ROLES = ["ADMIN", "DOCTOR", "LAB_TECH", "USER"] as const;
+const ROLES = ["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"] as const;
 const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Admin",
-  DOCTOR: "Médecin",
-  LAB_TECH: "Technicien",
-  USER: "Utilisateur",
+  ADMIN:        "Administrateur",
+  RECEPTIONIST: "Réceptionniste",
+  COLLECTOR:    "Préleveur",
+  LAB_TECH:     "Technicien Labo",
+  DOCTOR:       "Médecin",
 };
 const ROLE_COLORS: Record<string, string> = {
-  ADMIN: "bg-red-100 text-red-700 border-red-200",
-  DOCTOR: "bg-blue-100 text-blue-700 border-blue-200",
-  LAB_TECH: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  USER: "bg-slate-100 text-slate-600 border-slate-200",
+  ADMIN:        "bg-red-500/10 text-red-400 border-red-500/20",
+  RECEPTIONIST: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  COLLECTOR:    "bg-amber-500/10 text-amber-400 border-amber-500/20",
+  LAB_TECH:     "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  DOCTOR:       "bg-blue-500/10 text-blue-400 border-blue-500/20",
 };
 
 // ── Composant Modal ────────────────────────────────────────────────────────
@@ -46,7 +48,7 @@ function UserModal({
     last_name: user?.last_name ?? "",
     email: user?.email ?? "",
     password: "",
-    role: user?.role ?? "USER",
+    role: user?.role ?? "DOCTOR",
     is_active: user?.is_active ?? true,
   });
   const [showPwd, setShowPwd] = useState(false);

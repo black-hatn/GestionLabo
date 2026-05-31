@@ -9,9 +9,10 @@ from app.config.database import Base
 
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
-    DOCTOR = "DOCTOR"
+    RECEPTIONIST = "RECEPTIONIST"
+    COLLECTOR = "COLLECTOR"
     LAB_TECH = "LAB_TECH"
-    USER = "USER"
+    DOCTOR = "DOCTOR"
 
 
 class User(Base):
@@ -22,7 +23,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.USER, nullable=False)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.DOCTOR, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
