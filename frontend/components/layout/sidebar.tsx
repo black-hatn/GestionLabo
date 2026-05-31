@@ -45,24 +45,17 @@ export function Sidebar() {
         href={href}
         title={collapsed ? label : undefined}
         className={cn(
-          "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 select-none",
+          "group flex items-center gap-3 px-3 py-2.5 text-sm font-semibold transition-all duration-150 select-none border-2",
           active
             ? danger
-              ? "bg-red-500/15 text-red-400 border border-red-500/25"
-              : "bg-emerald-500/12 text-emerald-400 border border-emerald-500/20"
+              ? "bg-red-500 text-white border-red-500"
+              : "bg-emerald-500 text-white border-emerald-500"
             : danger
-              ? "text-slate-500 hover:text-red-400 hover:bg-red-500/8"
-              : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.05]"
+              ? "bg-transparent text-slate-400 border-transparent hover:border-red-500 hover:text-red-400"
+              : "bg-transparent text-slate-400 border-transparent hover:border-emerald-500/50 hover:text-white"
         )}
       >
-        {/* Active indicator bar */}
-        {active && (
-          <div className={cn(
-            "absolute left-0 top-[20%] bottom-[20%] w-[3px] rounded-r-full",
-            danger ? "bg-red-400" : "bg-emerald-400"
-          )} />
-        )}
-        <Icon className={cn("w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-110", active ? "" : "")} />
+        <Icon className="w-4 h-4 shrink-0" />
         <span className={cn(
           "transition-all duration-200 whitespace-nowrap leading-none",
           collapsed ? "w-0 opacity-0 overflow-hidden" : "w-auto opacity-100"

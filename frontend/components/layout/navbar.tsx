@@ -3,11 +3,12 @@
 
 import { useAuthStore } from "@/lib/auth-store";
 import { useToastStore } from "@/lib/toast-store";
-import { LogOut, Bell, Search, Activity, Zap } from "lucide-react";
+import { LogOut, Bell, Search, Activity, Zap, AlertTriangle } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import resultService, { ResultItem } from "@/services/api/result";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   ADMIN:        { label: "Administrateur", color: "text-red-400 border-red-500/25 bg-red-500/8"         },
@@ -23,6 +24,9 @@ export function Navbar() {
   const toast = useToastStore();
   const [avatar, setAvatar] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [critiques, setCritiques] = useState<ResultItem[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem("user_avatar");
@@ -31,6 +35,25 @@ export function Navbar() {
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
+
+  const loadCritiques = useCallback(async () => {
+    setNotifLoading(true);
+    try {
+      const data = await resultService.getResults(1, 50);
+      const crit = (data.items ?? []).filter(r => r.status === "CRITIQUE");
+      setCritiques(crit);
+    } catch { /* silent */ }
+    finally { setNotifLoading(false); }
+  }, []);
+
+  useEffect(() => { loadCritiques(); }, [loadCritiques]);
+
+  const unreadCount = critiques.filter(r => !readIds.has(r.id)).length;
+
+  const markAllRead = () => {
+    setReadIds(new Set(critiques.map(r => r.id)));
+    setNotifOpen(false);
+  };
 
   const handleLogout = () => {
     if (logout) logout();
@@ -43,7 +66,7 @@ export function Navbar() {
     return `${user.first_name?.charAt(0) ?? ""}${user.last_name?.charAt(0) ?? ""}`.toUpperCase() || "?";
   };
 
-  const roleConfig = ROLE_CONFIG[user?.role ?? "USER"] ?? ROLE_CONFIG.USER;
+  const roleConfig = ROLE_CONFIG[user?.role ?? "ADMIN"] ?? Object.values(ROLE_CONFIG)[0];
 
   return (
     <header
@@ -99,40 +122,96 @@ export function Navbar() {
         {/* Notifications */}
         <div className="relative">
           <button
-            onClick={() => { setNotifOpen(!notifOpen); }}
+            onClick={() => { setNotifOpen(!notifOpen); if (!notifOpen) loadCritiques(); }}
             className="relative p-2 rounded-xl text-slate-500 hover:text-white hover:bg-white/[0.06] transition-all"
           >
             <Bell className="w-4.5 h-4.5" />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-surface" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[14px] h-[14px] bg-red-500 rounded-full border border-[#0a1525] flex items-center justify-center text-[9px] font-bold text-white px-0.5">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </button>
 
           {notifOpen && (
             <div
-              className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl border border-white/[0.08] overflow-hidden shadow-dropdown animate-scale-in"
+              className="absolute right-0 top-[calc(100%+8px)] w-80 rounded-2xl border border-white/[0.08] overflow-hidden shadow-dropdown animate-scale-in"
               style={{ background: "rgba(10,21,37,0.98)", backdropFilter: "blur(24px)" }}
             >
               <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <span className="text-sm font-bold text-white">Notifications</span>
-                <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/8">1 nouvelle</span>
+                {unreadCount > 0 && (
+                  <span className="text-[10px] font-bold text-red-400 px-2 py-0.5 rounded-full border border-red-500/20 bg-red-500/10">
+                    {unreadCount} critique{unreadCount > 1 ? "s" : ""}
+                  </span>
+                )}
               </div>
-              <div className="px-4 py-3.5">
-                <div className="flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                    <Bell className="w-3.5 h-3.5 text-amber-400" />
+
+              <div className="max-h-72 overflow-y-auto">
+                {notifLoading ? (
+                  <div className="px-4 py-6 text-center text-xs text-slate-600">Chargement…</div>
+                ) : critiques.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-xs text-slate-600">
+                    Aucun résultat critique en attente
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-200">Résultat critique détecté</div>
-                    <div className="text-xs text-slate-500 mt-0.5">Patient Mariama Thiam · Il y a 5 min</div>
-                  </div>
-                </div>
+                ) : (
+                  critiques.map(r => {
+                    const isRead = readIds.has(r.id);
+                    const date = new Date(r.tested_at || r.created_at);
+                    const now = new Date();
+                    const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
+                    const timeLabel = diffMin < 60
+                      ? `Il y a ${diffMin} min`
+                      : diffMin < 1440
+                      ? `Il y a ${Math.floor(diffMin / 60)} h`
+                      : `Il y a ${Math.floor(diffMin / 1440)} j`;
+                    return (
+                      <Link
+                        key={r.id}
+                        href="/dashboard/results"
+                        onClick={() => setNotifOpen(false)}
+                        className={`flex items-start gap-3 px-4 py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors ${isRead ? "opacity-50" : ""}`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-red-500/15 flex items-center justify-center shrink-0 mt-0.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-slate-200 truncate">
+                            Résultat critique détecté
+                          </div>
+                          <div className="text-xs text-slate-500 mt-0.5 truncate">
+                            {r.patient_name
+                              ? `Patient ${r.patient_name}`
+                              : r.exam_name
+                              ? `Analyse : ${r.exam_name}`
+                              : `Résultat #${r.id.slice(0, 6)}`}
+                            {" · "}
+                            {timeLabel}
+                          </div>
+                        </div>
+                        {!isRead && <span className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1.5" />}
+                      </Link>
+                    );
+                  })
+                )}
               </div>
-              <div className="px-4 py-2.5 border-t border-white/[0.05]">
-                <button
-                  className="text-xs text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
+
+              <div className="px-4 py-2.5 border-t border-white/[0.05] flex items-center justify-between">
+                <Link
+                  href="/dashboard/results"
                   onClick={() => setNotifOpen(false)}
+                  className="text-xs text-emerald-400 font-semibold hover:text-emerald-300 transition-colors"
                 >
-                  Tout marquer comme lu
-                </button>
+                  Voir tous les résultats
+                </Link>
+                {critiques.length > 0 && (
+                  <button
+                    className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                    onClick={markAllRead}
+                  >
+                    Tout marquer comme lu
+                  </button>
+                )}
               </div>
             </div>
           )}
