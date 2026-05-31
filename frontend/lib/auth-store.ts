@@ -46,6 +46,9 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         set({ accessToken: null, user: null });
+        if (typeof document !== "undefined") {
+          document.cookie = "novabio_session=; path=/; max-age=0";
+        }
       },
     }),
     {

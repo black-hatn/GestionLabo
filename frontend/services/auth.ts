@@ -79,7 +79,6 @@ class AuthService {
     // ── Hydrater le store Zustand (source de vérité unique) ──
     // useAuthStore.getState() fonctionne en dehors des composants React
     const { useAuthStore } = await import('@/lib/auth-store');
-    const { UserRole } = await import('@/lib/permissions') as any;
     useAuthStore.getState().login(tokens.access_token, {
       id:         userData?.id         || '',
       email:      userData?.email      || email,
@@ -89,6 +88,11 @@ class AuthService {
       is_active:  userData?.is_active  !== false,
     });
 
+    // ── Cookie de session pour le middleware Edge Next.js ──
+    if (typeof document !== 'undefined') {
+      document.cookie = "novabio_session=1; path=/; max-age=86400; SameSite=Lax";
+    }
+
     return tokens;
   }
 
@@ -96,6 +100,8 @@ class AuthService {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.TOKEN_KEY);
       localStorage.removeItem(this.REFRESH_TOKEN_KEY);
+      // Supprimer le cookie de session
+      document.cookie = "novabio_session=; path=/; max-age=0";
     }
   }
 

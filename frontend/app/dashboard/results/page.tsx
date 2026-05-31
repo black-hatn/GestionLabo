@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import {
   Plus, Search, Edit2, Eye, Trash2, Loader2, AlertCircle,
   CheckCircle2, TrendingUp, Activity, RefreshCw, X, Beaker,
-  FlaskConical, User, FileText, XCircle,
+  FlaskConical, User, FileText, XCircle, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,12 @@ import { useAuthStore } from "@/lib/auth-store";
 import resultService, { type ResultItem, type ResultStatus } from "@/services/api/result";
 import examRequestService from "@/services/api/exam-request";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
+
+// Lazy-load le composant PDF (bundle volumineux — chargement à la demande)
+const DownloadResultPDFButton = dynamic(
+  () => import("@/lib/pdf/result-report").then(m => ({ default: m.DownloadResultPDFButton })),
+  { ssr: false, loading: () => <span className="text-xs text-slate-500">PDF…</span> }
+);
 
 // ── Status helpers ─────────────────────────────────────────────────────────
 const STATUS_LABEL: Record<ResultStatus, string> = {
@@ -254,8 +261,13 @@ function ResultDetailSheet({ result, open, onClose, onEdit, canEdit }: {
           )}
         </div>
 
-        <div className="px-6 py-4 dark:border-t dark:border-white/[0.07] border-t border-slate-100 flex gap-3">
+        <div className="px-6 py-4 dark:border-t dark:border-white/[0.07] border-t border-slate-100 flex gap-3 flex-wrap">
           <Button variant="outline" onClick={onClose} className="flex-1 btn-ghost h-10">Fermer</Button>
+          {/* Bouton téléchargement PDF */}
+          <div className="flex items-center h-10 px-4 border-2 border-blue-500/40 text-blue-400 hover:bg-blue-500/10 hover:border-blue-400 bg-transparent transition-all text-sm font-semibold cursor-pointer">
+            <Download className="w-4 h-4 mr-2 shrink-0" />
+            <DownloadResultPDFButton result={result} className="text-sm font-semibold" />
+          </div>
           {canEdit && (
             <Button onClick={() => { onClose(); onEdit(result); }} className="flex-1 btn-emerald h-10 text-sm font-bold">
               Modifier
