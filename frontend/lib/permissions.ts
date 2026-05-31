@@ -3,7 +3,7 @@
  * Le SuperAdmin a accès à TOUT et peut tout modifier/supprimer
  */
 
-export type UserRole = "ADMIN" | "DOCTOR" | "LAB_TECH" | "USER";
+export type UserRole = "ADMIN" | "RECEPTIONIST" | "COLLECTOR" | "LAB_TECH" | "DOCTOR";
 
 interface Permission {
   read: boolean;
@@ -101,15 +101,16 @@ export function isAdmin(role: UserRole): boolean {
 }
 
 export function isSuperAdmin(role: UserRole): boolean {
-  return role === "ADMIN"; // ADMIN = Superadmin
+  return role === "ADMIN";
 }
 
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
-    ADMIN: "🔐 Superadmin",
-    DOCTOR: "👨‍⚕️ Médecin",
-    LAB_TECH: "🧪 Technicien Lab",
-    USER: "👤 Utilisateur",
+    ADMIN:        "🔐 Administrateur",
+    RECEPTIONIST: "🗂️ Réceptionniste",
+    COLLECTOR:    "🩸 Préleveur",
+    LAB_TECH:     "🧪 Technicien Labo",
+    DOCTOR:       "👨‍⚕️ Médecin",
   };
   return labels[role] || role;
 }

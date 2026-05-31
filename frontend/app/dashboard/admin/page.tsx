@@ -13,13 +13,23 @@ import { useAuthStore } from "@/lib/auth-store";
 import userService, { UserData } from "@/services/api/user";
 
 const roles = [
-  { value: "ADMIN", label: "Superadmin", color: "bg-red-100 text-red-700 border-red-200" },
-  { value: "DOCTOR", label: "Médecin", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "LAB_TECH", label: "Technicien Lab", color: "bg-purple-100 text-purple-700 border-purple-200" },
-  { value: "USER", label: "Patient", color: "bg-gray-100 text-gray-700 border-gray-200" },
+  { value: "ADMIN",        label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200"       },
+  { value: "RECEPTIONIST", label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  { value: "COLLECTOR",    label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200"  },
+  { value: "LAB_TECH",     label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "DOCTOR",       label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200"    },
 ];
 
-const getRoleConfig = (role: string) => roles.find(r => r.value === role) ?? roles[3];
+const ROLE_AVATAR: Record<string, string> = {
+  ADMIN:        "bg-red-100 text-red-700",
+  RECEPTIONIST: "bg-indigo-100 text-indigo-700",
+  COLLECTOR:    "bg-amber-100 text-amber-700",
+  LAB_TECH:     "bg-purple-100 text-purple-700",
+  DOCTOR:       "bg-blue-100 text-blue-700",
+};
+
+const getRoleConfig = (role: string) =>
+  roles.find(r => r.value === role) ?? { value: role, label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
 
 const getInitials = (firstName: string, lastName: string) =>
   `${firstName?.charAt(0) ?? ""}${lastName?.charAt(0) ?? ""}`.toUpperCase();
@@ -38,7 +48,7 @@ const defaultForm: FormData = {
   password: "",
   first_name: "",
   last_name: "",
-  role: "USER",
+  role: "DOCTOR",
   is_active: true,
 };
 
@@ -167,11 +177,13 @@ export default function AdminControlPanel() {
   };
 
   const stats = {
-    total: users.length,
-    admins: users.filter(u => u.role === "ADMIN").length,
-    doctors: users.filter(u => u.role === "DOCTOR").length,
-    techs: users.filter(u => u.role === "LAB_TECH").length,
-    active: users.filter(u => u.is_active).length,
+    total:         users.length,
+    admins:        users.filter(u => u.role === "ADMIN").length,
+    receptionists: users.filter(u => u.role === "RECEPTIONIST").length,
+    collectors:    users.filter(u => u.role === "COLLECTOR").length,
+    techs:         users.filter(u => u.role === "LAB_TECH").length,
+    doctors:       users.filter(u => u.role === "DOCTOR").length,
+    active:        users.filter(u => u.is_active).length,
   };
 
   return (
@@ -182,7 +194,7 @@ export default function AdminControlPanel() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-extrabold mb-1">🔐 Panneau Admin</h1>
-              <p className="text-red-200 text-lg">Gestion complète des utilisateurs — Superadmin</p>
+              <p className="text-red-200 text-lg">Gestion complète des utilisateurs — Administrateur</p>
               <p className="text-red-300 text-sm mt-1">Connecté en tant que : {currentUser?.first_name} {currentUser?.last_name}</p>
             </div>
             <Shield className="w-24 h-24 opacity-20 hidden md:block" />
@@ -198,17 +210,19 @@ export default function AdminControlPanel() {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
           {[
-            { label: "Total", value: stats.total, color: "text-neutral-900" },
-            { label: "Admins", value: stats.admins, color: "text-red-700" },
-            { label: "Médecins", value: stats.doctors, color: "text-blue-700" },
-            { label: "Techniciens", value: stats.techs, color: "text-purple-700" },
-            { label: "Actifs", value: stats.active, color: "text-green-700" },
+            { label: "Total",           value: stats.total,         color: "text-neutral-900"  },
+            { label: "Admins",          value: stats.admins,        color: "text-red-700"       },
+            { label: "Réceptionnistes", value: stats.receptionists, color: "text-indigo-700"    },
+            { label: "Préleveurs",      value: stats.collectors,    color: "text-amber-700"     },
+            { label: "Techniciens",     value: stats.techs,         color: "text-purple-700"    },
+            { label: "Médecins",        value: stats.doctors,       color: "text-blue-700"      },
+            { label: "Actifs",          value: stats.active,        color: "text-emerald-700"   },
           ].map(({ label, value, color }) => (
-            <Card key={label} className="border-0 shadow-md text-center p-4">
-              <div className={`text-3xl font-extrabold ${color}`}>{value}</div>
-              <div className="text-xs text-neutral-500 mt-1 font-medium">{label}</div>
+            <Card key={label} className="border-0 shadow-md text-center p-3">
+              <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
+              <div className="text-[11px] text-neutral-500 mt-1 font-medium leading-tight">{label}</div>
             </Card>
           ))}
         </div>
@@ -356,12 +370,7 @@ export default function AdminControlPanel() {
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         {/* Avatar */}
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                          user.role === "ADMIN" ? "bg-red-100 text-red-700" :
-                          user.role === "DOCTOR" ? "bg-blue-100 text-blue-700" :
-                          user.role === "LAB_TECH" ? "bg-purple-100 text-purple-700" :
-                          "bg-gray-100 text-gray-700"
-                        }`}>
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${ROLE_AVATAR[user.role] ?? "bg-gray-100 text-gray-700"}`}>
                           {getInitials(user.first_name, user.last_name)}
                         </div>
 

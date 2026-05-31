@@ -39,10 +39,11 @@ const recentActivities = [
 ];
 
 const ROLE_LABELS: Record<string, string> = {
-  ADMIN:    "Administrateur",
-  DOCTOR:   "Médecin",
-  LAB_TECH: "Technicien de Laboratoire",
-  USER:     "Patient",
+  ADMIN:        "Administrateur",
+  RECEPTIONIST: "Réceptionniste",
+  COLLECTOR:    "Préleveur",
+  LAB_TECH:     "Technicien de Laboratoire",
+  DOCTOR:       "Médecin",
 };
 
 /* ─ Stat Card ───────────────────────────────────────────── */
@@ -99,8 +100,8 @@ function CustomTooltip({ active, payload, label }: any) {
 /* ─ Page ────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const roleLabel = ROLE_LABELS[user?.role ?? "USER"] ?? "Utilisateur";
-  const isPatient = !user?.role || user.role === "USER";
+  const roleLabel = ROLE_LABELS[user?.role ?? ""] ?? "Utilisateur";
+  const isPatient = false; // Aucun rôle "patient" dans le système
 
   const stats = { totalPatients: 1250, totalExams: 3420, totalResults: 2890, totalInvoices: 450 };
   const growth = { patients: 12.5, exams: 8.3, results: 15.2, invoices: 5.8 };

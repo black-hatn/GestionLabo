@@ -10,10 +10,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
-  ADMIN:    { label: "Superadmin",   color: "text-red-400 border-red-500/25 bg-red-500/8" },
-  DOCTOR:   { label: "Médecin",      color: "text-blue-400 border-blue-500/25 bg-blue-500/8" },
-  LAB_TECH: { label: "Tech. Labo",   color: "text-emerald-400 border-emerald-500/25 bg-emerald-500/8" },
-  USER:     { label: "Patient",      color: "text-slate-400 border-white/10 bg-white/5" },
+  ADMIN:        { label: "Administrateur", color: "text-red-400 border-red-500/25 bg-red-500/8"         },
+  RECEPTIONIST: { label: "Réceptionniste", color: "text-indigo-400 border-indigo-500/25 bg-indigo-500/8" },
+  COLLECTOR:    { label: "Préleveur",       color: "text-amber-400 border-amber-500/25 bg-amber-500/8"   },
+  LAB_TECH:     { label: "Technicien Labo", color: "text-emerald-400 border-emerald-500/25 bg-emerald-500/8" },
+  DOCTOR:       { label: "Médecin",         color: "text-blue-400 border-blue-500/25 bg-blue-500/8"     },
 };
 
 export function Navbar() {

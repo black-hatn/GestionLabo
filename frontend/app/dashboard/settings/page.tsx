@@ -14,10 +14,11 @@ import { useAuthStore } from "@/lib/auth-store";
 import userService from "@/services/api/user";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  ADMIN: { label: "Superadmin", color: "bg-red-100 text-red-700 border-red-200" },
-  DOCTOR: { label: "Médecin", color: "bg-blue-100 text-blue-700 border-blue-200" },
-  LAB_TECH: { label: "Technicien Lab", color: "bg-purple-100 text-purple-700 border-purple-200" },
-  USER: { label: "Patient", color: "bg-gray-100 text-gray-700 border-gray-200" },
+  ADMIN:        { label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200"         },
+  RECEPTIONIST: { label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  COLLECTOR:    { label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200"   },
+  LAB_TECH:     { label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200" },
+  DOCTOR:       { label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200"      },
 };
 
 export default function SettingsPage() {
