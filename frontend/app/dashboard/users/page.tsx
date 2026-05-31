@@ -109,6 +109,7 @@ function UserModal({
                 required
                 disabled={readOnly}
                 placeholder="Prénom"
+                className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500"
               />
             </div>
             <div>
@@ -119,6 +120,7 @@ function UserModal({
                 required
                 disabled={readOnly}
                 placeholder="Nom"
+                className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500"
               />
             </div>
           </div>
@@ -132,6 +134,7 @@ function UserModal({
               required
               disabled={readOnly || mode === "edit"}
               placeholder="email@exemple.com"
+              className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500"
             />
           </div>
 
@@ -145,7 +148,7 @@ function UserModal({
                   onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                   required
                   placeholder="Mot de passe"
-                  className="pr-10"
+                  className="pr-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500"
                 />
                 <button
                   type="button"
