@@ -2,43 +2,26 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/lib/auth-store";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Users, Activity, FileText, Receipt, TrendingUp, ArrowUpRight, ArrowDownRight,
-  AlertCircle, Zap, Brain, Bell, Calendar, ChevronRight, FlaskConical, Beaker
+  Users, Activity, Receipt, AlertCircle, Zap, Brain,
+  ChevronRight, FlaskConical, ShieldOff, Loader2,
+  ClipboardList, Beaker, UserCheck,
 } from "lucide-react";
 import { useDashboardActions } from "@/hooks/use-dashboard-actions";
 import { ScheduleExamDialog } from "@/components/dashboard/schedule-exam-dialog";
-import { ReportDialog } from "@/components/dashboard/report-dialog";
-import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer
-} from "recharts";
+import { ReportDialog }        from "@/components/dashboard/report-dialog";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import patientService       from "@/services/api/patient";
+import examRequestService   from "@/services/api/exam-request";
+import resultService        from "@/services/api/result";
+import invoiceService       from "@/services/api/invoice";
 
-/* ─ Static Demo Data ────────────────────────────────────── */
-const chartData = [
-  { month: "Jan", patients: 420, exams: 280, results: 350 },
-  { month: "Fév", patients: 380, exams: 250, results: 320 },
-  { month: "Mar", patients: 450, exams: 320, results: 400 },
-  { month: "Avr", patients: 520, exams: 380, results: 480 },
-  { month: "Mai", patients: 580, exams: 420, results: 550 },
-  { month: "Jun", patients: 650, exams: 480, results: 620 },
-];
+/* ─ Constants ──────────────────────────────────────────── */
+const VALID_ROLES = ["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"] as const;
+type ValidRole = typeof VALID_ROLES[number];
 
-const invoiceData = [
-  { name: "Payées",     value: 65, color: "#10b981" },
-  { name: "En attente", value: 25, color: "#f59e0b" },
-  { name: "En retard",  value: 10, color: "#ef4444" },
-];
-
-const recentActivities = [
-  { icon: "👤", label: "Nouveau patient ajouté",     patient: "Amina Diallo",    time: "2h",    type: "patient" },
-  { icon: "🧪", label: "Examen analysé",             patient: "Ahmed Sow",       time: "45min", type: "exam" },
-  { icon: "✓",  label: "Résultat validé",            patient: "Mimi Ndiaye",     time: "30min", type: "result" },
-  { icon: "💰", label: "Facture émise",              patient: "Ousmane Ba",      time: "15min", type: "invoice" },
-  { icon: "⚠️", label: "Résultat critique détecté",  patient: "Mariama Thiam",   time: "5min",  type: "alert" },
-];
-
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<ValidRole, string> = {
   ADMIN:        "Administrateur",
   RECEPTIONIST: "Réceptionniste",
   COLLECTOR:    "Préleveur",
@@ -46,53 +29,90 @@ const ROLE_LABELS: Record<string, string> = {
   DOCTOR:       "Médecin",
 };
 
-/* ─ Stat Card ───────────────────────────────────────────── */
-function StatCard({
-  title, value, icon: Icon, growth, color,
-}: {
-  title: string; value: number; icon: React.ElementType; growth: number; color: string;
+/* Actions rapides par rôle */
+const QUICK_ACTIONS: Record<ValidRole, { label: string; href: string; icon: React.ElementType; color: string }[]> = {
+  ADMIN: [
+    { label: "Nouveau Patient",   href: "/dashboard/patients",      icon: Users,        color: "emerald" },
+    { label: "Demande d'Examen",  href: "/dashboard/exam-requests", icon: ClipboardList, color: "purple"  },
+    { label: "Saisir Résultat",   href: "/dashboard/results",       icon: FlaskConical,  color: "teal"    },
+    { label: "Gestion Utilisateurs", href: "/dashboard/users",      icon: UserCheck,     color: "red"     },
+  ],
+  RECEPTIONIST: [
+    { label: "Nouveau Patient",   href: "/dashboard/patients",      icon: Users,        color: "emerald" },
+    { label: "Demande d'Examen",  href: "/dashboard/exam-requests", icon: ClipboardList, color: "purple"  },
+    { label: "Facturation",       href: "/dashboard/invoices",      icon: Receipt,       color: "amber"   },
+    { label: "Tous les Patients", href: "/dashboard/patients",      icon: Users,        color: "blue"    },
+  ],
+  COLLECTOR: [
+    { label: "Mes Prélèvements",  href: "/dashboard/exam-requests", icon: ClipboardList, color: "amber"  },
+    { label: "Patients",          href: "/dashboard/patients",      icon: Users,        color: "blue"    },
+    { label: "Résultats",         href: "/dashboard/results",       icon: Activity,     color: "teal"    },
+    { label: "Tableau de Bord",   href: "/dashboard",               icon: Beaker,       color: "emerald" },
+  ],
+  LAB_TECH: [
+    { label: "Saisir Résultat",   href: "/dashboard/results",       icon: FlaskConical,  color: "teal"    },
+    { label: "Demandes en cours", href: "/dashboard/exam-requests", icon: ClipboardList, color: "purple"  },
+    { label: "Catalogue Analyses",href: "/dashboard/exams",         icon: Beaker,        color: "cyan"    },
+    { label: "Patients",          href: "/dashboard/patients",      icon: Users,        color: "blue"    },
+  ],
+  DOCTOR: [
+    { label: "Résultats",         href: "/dashboard/results",       icon: FlaskConical,  color: "teal"    },
+    { label: "Patients",          href: "/dashboard/patients",      icon: Users,        color: "blue"    },
+    { label: "Demandes Examens",  href: "/dashboard/exam-requests", icon: ClipboardList, color: "purple"  },
+    { label: "Catalogue",         href: "/dashboard/exams",         icon: Beaker,        color: "cyan"    },
+  ],
+};
+
+/* ─ Stat Card ──────────────────────────────────────────── */
+function StatCard({ title, value, icon: Icon, color, loading }: {
+  title: string; value: number | null; icon: React.ElementType; color: string; loading: boolean;
 }) {
-  const positive = growth >= 0;
-  const colorMap: Record<string, { icon: string; ring: string; glow: string }> = {
-    emerald: { icon: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", ring: "border-emerald-500/20", glow: "shadow-emerald-500/5" },
-    blue:    { icon: "text-blue-400 bg-blue-500/10 border-blue-500/15",          ring: "border-blue-500/20",    glow: "shadow-blue-500/5" },
-    teal:    { icon: "text-teal-400 bg-teal-500/10 border-teal-500/15",          ring: "border-teal-500/20",    glow: "shadow-teal-500/5" },
-    amber:   { icon: "text-amber-400 bg-amber-500/10 border-amber-500/15",       ring: "border-amber-500/20",   glow: "shadow-amber-500/5" },
+  const colorMap: Record<string, string> = {
+    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    blue:    "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    teal:    "text-teal-400 bg-teal-500/10 border-teal-500/20",
+    amber:   "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    purple:  "text-purple-400 bg-purple-500/10 border-purple-500/20",
   };
   const c = colorMap[color] ?? colorMap.emerald;
-
   return (
-    <div className={`group card-premium rounded-2xl p-6 border ${c.ring} hover:shadow-xl ${c.glow} transition-all duration-300`}>
+    <div className={`card-premium rounded-2xl p-6 border border-white/[0.06] hover:shadow-xl transition-all duration-300`}>
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${c.icon} group-hover:scale-110 transition-transform duration-300`}>
+        <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${c}`}>
           <Icon className="w-5 h-5" />
-        </div>
-        <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${positive ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-red-400 bg-red-500/10 border border-red-500/20"}`}>
-          {positive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          {Math.abs(growth)}%
         </div>
       </div>
       <div className="text-3xl font-extrabold text-white font-display leading-none mb-1">
-        {value.toLocaleString("fr-FR")}
+        {loading ? <Loader2 className="w-6 h-6 animate-spin text-slate-600" /> : (value ?? 0).toLocaleString("fr-FR")}
       </div>
       <div className="text-xs font-medium text-slate-500">{title}</div>
     </div>
   );
 }
 
-/* ─ Custom Recharts Tooltip ─────────────────────────────── */
-function CustomTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
+/* ─ Accès refusé ────────────────────────────────────────── */
+function AccessDenied({ role }: { role: string }) {
   return (
-    <div className="glass-strong rounded-xl p-3 border border-white/[0.08] shadow-dropdown">
-      <p className="text-xs font-bold text-slate-400 mb-2">{label}</p>
-      {payload.map((p: any) => (
-        <div key={p.dataKey} className="flex items-center gap-2 text-xs font-semibold">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: p.color }} />
-          <span className="text-slate-400">{p.name}:</span>
-          <span className="text-white">{p.value}</span>
-        </div>
-      ))}
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-5 animate-fade-in">
+      <div className="w-20 h-20 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+        <ShieldOff className="w-10 h-10 text-red-400" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-extrabold text-white mb-2">Rôle non reconnu</h2>
+        <p className="text-slate-400 text-sm max-w-sm">
+          Votre compte a le rôle <span className="font-bold text-red-400">&quot;{role}&quot;</span> qui n&apos;est plus valide dans ce système.
+          Veuillez contacter l&apos;administrateur pour mettre à jour votre rôle.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2 w-full max-w-xs">
+        <p className="text-xs text-slate-600">Rôles valides :</p>
+        {VALID_ROLES.map(r => (
+          <div key={r} className="flex items-center gap-2 text-xs text-slate-400 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+            {ROLE_LABELS[r]}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -100,60 +120,77 @@ function CustomTooltip({ active, payload, label }: any) {
 /* ─ Page ────────────────────────────────────────────────── */
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const roleLabel = ROLE_LABELS[user?.role ?? ""] ?? "Utilisateur";
-  const isPatient = false; // Aucun rôle "patient" dans le système
+  const role = (user?.role ?? "") as ValidRole;
+  const isValidRole = VALID_ROLES.includes(role);
 
-  const stats = { totalPatients: 1250, totalExams: 3420, totalResults: 2890, totalInvoices: 450 };
-  const growth = { patients: 12.5, exams: 8.3, results: 15.2, invoices: 5.8 };
+  /* Stats live */
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [stats, setStats] = useState({ patients: 0, exams: 0, results: 0, invoices: 0 });
+  const [critiques, setCritiques] = useState(0);
 
-  /* Patient view */
-  if (isPatient) {
-    return (
-      <div className="space-y-8 animate-fade-in">
-        {/* Welcome */}
-        <div className="relative rounded-2xl overflow-hidden border border-emerald-500/15 p-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 via-teal-600/8 to-transparent" />
-          <div className="absolute inset-0 dot-pattern opacity-20" />
-          <div className="relative z-10">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white font-display">
-              Bonjour, {user?.first_name || "Patient"} 👋
-            </h1>
-            <p className="text-slate-400 mt-1">Espace Patient — NovaBio Lab</p>
-          </div>
-        </div>
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const [p, e, r, inv] = await Promise.all([
+        patientService.getPatients(1, 1),
+        examRequestService.getExamRequests(1, 1),
+        resultService.getResults(1, 1),
+        invoiceService.getInvoices(1, 1),
+      ]);
+      setStats({
+        patients: p.total ?? 0,
+        exams:    e.total ?? 0,
+        results:  r.total ?? 0,
+        invoices: inv.total ?? 0,
+      });
+      // Compter les résultats critiques réels
+      const allResults = await resultService.getResults(1, 100);
+      const crit = (allResults.items ?? []).filter((res: any) => res.status === "CRITIQUE").length;
+      setCritiques(crit);
+    } catch { /* silent */ }
+    finally { setStatsLoading(false); }
+  }, []);
 
-        <div className="grid md:grid-cols-2 gap-5">
-          <div className="card-premium rounded-2xl p-6 border border-white/[0.06]">
-            <h2 className="text-base font-bold text-white mb-1">Mes Derniers Résultats</h2>
-            <p className="text-xs text-slate-500 mb-6">Consultez vos analyses biologiques récentes</p>
-            <div className="text-center py-8">
-              <Beaker className="w-10 h-10 mx-auto text-slate-700 mb-3" />
-              <p className="text-sm text-slate-600">Aucun résultat disponible pour le moment</p>
-            </div>
-            <Link href="/dashboard/results">
-              <button className="w-full h-10 rounded-xl text-sm font-bold btn-emerald mt-2">Voir tout l&apos;historique</button>
-            </Link>
-          </div>
+  useEffect(() => { if (isValidRole) loadStats(); }, [isValidRole, loadStats]);
 
-          <div className="card-premium rounded-2xl p-6 border border-white/[0.06]">
-            <h2 className="text-base font-bold text-white mb-1">Mes Factures</h2>
-            <p className="text-xs text-slate-500 mb-6">Suivi de vos règlements</p>
-            <div className="text-center py-8">
-              <Receipt className="w-10 h-10 mx-auto text-slate-700 mb-3" />
-              <p className="text-sm text-slate-600">Vous êtes à jour dans vos paiements</p>
-            </div>
-            <Link href="/dashboard/invoices">
-              <button className="w-full h-10 rounded-xl text-sm font-semibold btn-ghost mt-2">Voir mes factures</button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  /* Rôle invalide → écran d'accès refusé */
+  if (!isValidRole) return <AccessDenied role={user?.role ?? "inconnu"} />;
 
-  /* Staff / Admin view */
+  const roleLabel   = ROLE_LABELS[role];
+  const quickActions = QUICK_ACTIONS[role] ?? QUICK_ACTIONS.DOCTOR;
+
+  /* Stats à afficher selon le rôle */
+  const statCards = (() => {
+    if (role === "COLLECTOR") return [
+      { title: "Patients",            value: stats.patients, icon: Users,        color: "blue"    },
+      { title: "Demandes d'examens",  value: stats.exams,    icon: ClipboardList, color: "purple"  },
+    ];
+    if (role === "DOCTOR") return [
+      { title: "Patients",            value: stats.patients, icon: Users,        color: "blue"    },
+      { title: "Demandes d'examens",  value: stats.exams,    icon: ClipboardList, color: "purple"  },
+      { title: "Résultats",           value: stats.results,  icon: FlaskConical,  color: "teal"    },
+    ];
+    if (role === "LAB_TECH") return [
+      { title: "Demandes d'examens",  value: stats.exams,    icon: ClipboardList, color: "purple"  },
+      { title: "Résultats saisis",    value: stats.results,  icon: FlaskConical,  color: "teal"    },
+      { title: "Patients",            value: stats.patients, icon: Users,        color: "blue"    },
+    ];
+    if (role === "RECEPTIONIST") return [
+      { title: "Patients enregistrés", value: stats.patients, icon: Users,        color: "emerald" },
+      { title: "Demandes d'examens",   value: stats.exams,    icon: ClipboardList, color: "purple"  },
+      { title: "Factures",             value: stats.invoices, icon: Receipt,       color: "amber"   },
+    ];
+    /* ADMIN : tout */
+    return [
+      { title: "Patients",           value: stats.patients, icon: Users,        color: "emerald" },
+      { title: "Demandes d'examens", value: stats.exams,    icon: ClipboardList, color: "purple"  },
+      { title: "Résultats",          value: stats.results,  icon: FlaskConical,  color: "teal"    },
+      { title: "Factures",           value: stats.invoices, icon: Receipt,       color: "amber"   },
+    ];
+  })();
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { openDialog, openSchedule, openReport, openAlert, closeDialog } = useDashboardActions();
+  const { openDialog, openSchedule, openReport, closeDialog } = useDashboardActions();
 
   return (
     <div className="space-y-7 animate-fade-in">
@@ -161,7 +198,7 @@ export default function DashboardPage() {
       <ScheduleExamDialog open={openDialog === "schedule"} onClose={closeDialog} />
       <ReportDialog       open={openDialog === "report"}   onClose={closeDialog} />
 
-      {/* Welcome Banner */}
+      {/* ── Welcome Banner ── */}
       <div className="relative rounded-2xl overflow-hidden border border-emerald-500/15 p-8">
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 via-teal-600/8 to-blue-600/5" />
         <div className="absolute inset-0 dot-pattern opacity-20" />
@@ -171,10 +208,10 @@ export default function DashboardPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <div className="relative flex h-1.5 w-1.5">
+              <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-              </div>
+              </span>
               <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Système opérationnel</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white font-display">
@@ -185,184 +222,85 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={openSchedule}
-              className="h-9 px-4 rounded-xl text-xs font-bold btn-ghost flex items-center gap-2 cursor-pointer"
-            >
-              <Calendar className="w-3.5 h-3.5" />
+            <button onClick={openSchedule}
+              className="h-9 px-4 rounded-xl text-xs font-bold btn-ghost flex items-center gap-2">
               Planifier
             </button>
-            <button
-              onClick={openReport}
-              className="h-9 px-4 rounded-xl text-xs font-bold btn-emerald flex items-center gap-2 cursor-pointer"
-            >
+            <button onClick={openReport}
+              className="h-9 px-4 rounded-xl text-xs font-bold btn-emerald flex items-center gap-2">
               <Zap className="w-3.5 h-3.5" />
-              Rapport IA
+              Rapport
             </button>
           </div>
         </div>
       </div>
 
-      {/* Critical Alert */}
-      <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-500/20 animate-scale-in" style={{ background: "rgba(245,158,11,0.05)" }}>
-        <AlertCircle className="w-4.5 h-4.5 text-amber-400 shrink-0 mt-0.5" />
-        <div className="flex-1 text-sm">
-          <span className="font-bold text-amber-300">3 résultats critiques</span>
-          <span className="text-amber-400/70"> en attente de validation — action requise</span>
+      {/* ── Alerte résultats critiques RÉELS ── */}
+      {critiques > 0 && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-red-500/20 animate-scale-in" style={{ background: "rgba(239,68,68,0.05)" }}>
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm">
+            <span className="font-bold text-red-300">{critiques} résultat{critiques > 1 ? "s" : ""} critique{critiques > 1 ? "s" : ""}</span>
+            <span className="text-red-400/70"> nécessite{critiques > 1 ? "nt" : ""} une attention immédiate</span>
+          </div>
+          <Link href="/dashboard/results">
+            <button className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1">
+              Voir <ChevronRight className="w-3 h-3" />
+            </button>
+          </Link>
         </div>
-        <Link href="/dashboard/results">
-          <button className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1">
-            Voir <ChevronRight className="w-3 h-3" />
-          </button>
-        </Link>
+      )}
+
+      {/* ── Stats réelles ── */}
+      <div className={`grid gap-4 ${statCards.length === 4 ? "grid-cols-2 lg:grid-cols-4" : statCards.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}>
+        {statCards.map(s => (
+          <StatCard key={s.title} {...s} loading={statsLoading} />
+        ))}
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Patients Actifs"    value={stats.totalPatients}  icon={Users}          growth={growth.patients}  color="emerald" />
-        <StatCard title="Examens Traités"    value={stats.totalExams}     icon={FlaskConical}   growth={growth.exams}     color="blue" />
-        <StatCard title="Résultats Validés"  value={stats.totalResults}   icon={Activity}       growth={growth.results}   color="teal" />
-        <StatCard title="Factures Émises"    value={stats.totalInvoices}  icon={Receipt}        growth={growth.invoices}  color="amber" />
-      </div>
-
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Line Chart */}
-        <div className="lg:col-span-2 card-premium rounded-2xl p-6 border border-white/[0.06]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-base font-bold text-white">Tendances d&apos;Activité</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Patients, examens et résultats sur 6 mois</p>
-            </div>
-            <div className="flex items-center gap-4 text-[11px] text-slate-500">
-              {[
-                { color: "#10b981", label: "Patients" },
-                { color: "#3b82f6", label: "Examens" },
-                { color: "#14b8a6", label: "Résultats" },
-              ].map(l => (
-                <div key={l.label} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-                  {l.label}
-                </div>
-              ))}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={chartData} margin={{ top: 0, right: 4, left: -24, bottom: 0 }}>
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#4b6a8a" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#4b6a8a" }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="patients" name="Patients" stroke="#10b981" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="exams"    name="Examens"  stroke="#3b82f6" strokeWidth={2} dot={false} strokeDasharray="6 3" />
-              <Line type="monotone" dataKey="results"  name="Résultats" stroke="#14b8a6" strokeWidth={2} dot={false} strokeDasharray="3 3" />
-            </LineChart>
-          </ResponsiveContainer>
+      {/* ── Actions rapides selon le rôle ── */}
+      <div className="card-premium rounded-2xl p-6 border border-white/[0.06]">
+        <div className="mb-5">
+          <h2 className="text-base font-bold text-white">Actions Rapides</h2>
+          <p className="text-xs text-slate-500 mt-0.5">Raccourcis adaptés à votre rôle — {roleLabel}</p>
         </div>
-
-        {/* Donut Chart */}
-        <div className="card-premium rounded-2xl p-6 border border-white/[0.06] flex flex-col">
-          <div className="mb-5">
-            <h2 className="text-base font-bold text-white">Statut Factures</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Répartition des paiements</p>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie data={invoiceData} cx="50%" cy="50%" innerRadius={52} outerRadius={76} paddingAngle={4} dataKey="value">
-                  {invoiceData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
-                </Pie>
-                <Tooltip formatter={(v) => [`${v}%`]} contentStyle={{ background: "rgba(10,21,37,0.98)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", color: "#e2e8f0", fontSize: "12px" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            {invoiceData.map(({ name, value, color }) => (
-              <div key={name} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                  <span className="text-slate-400">{name}</span>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {quickActions.map(({ label, href, icon: Icon, color }) => {
+            const c: Record<string, string> = {
+              emerald: "border-emerald-500/15 hover:border-emerald-500/30 hover:bg-emerald-500/[0.05] text-emerald-400",
+              blue:    "border-blue-500/15 hover:border-blue-500/30 hover:bg-blue-500/[0.05] text-blue-400",
+              teal:    "border-teal-500/15 hover:border-teal-500/30 hover:bg-teal-500/[0.05] text-teal-400",
+              amber:   "border-amber-500/15 hover:border-amber-500/30 hover:bg-amber-500/[0.05] text-amber-400",
+              purple:  "border-purple-500/15 hover:border-purple-500/30 hover:bg-purple-500/[0.05] text-purple-400",
+              cyan:    "border-cyan-500/15 hover:border-cyan-500/30 hover:bg-cyan-500/[0.05] text-cyan-400",
+              red:     "border-red-500/15 hover:border-red-500/30 hover:bg-red-500/[0.05] text-red-400",
+            };
+            return (
+              <Link key={href + label} href={href}>
+                <div className={`flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-200 text-center cursor-pointer ${c[color] ?? c.blue}`}>
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-semibold text-slate-300 leading-tight">{label}</span>
                 </div>
-                <span className="font-bold text-white">{value}%</span>
-              </div>
-            ))}
-          </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Recent Activity Feed */}
-        <div className="card-premium rounded-2xl p-6 border border-white/[0.06]">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="text-base font-bold text-white">Activité Récente</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Dernières actions sur la plateforme</p>
-            </div>
-            <Bell className="w-4 h-4 text-slate-600" />
-          </div>
-          <div className="flex flex-col gap-3">
-            {recentActivities.map(({ icon, label, patient, time, type }, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-default ${
-                  type === "alert"
-                    ? "border-amber-500/20 bg-amber-500/[0.04] hover:bg-amber-500/[0.07]"
-                    : "border-white/[0.04] hover:bg-white/[0.03]"
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
-                  {icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-slate-200 leading-none mb-0.5">{label}</div>
-                  <div className="text-xs text-slate-500">{patient}</div>
-                </div>
-                <div className="text-[11px] text-slate-600 shrink-0">Il y a {time}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="card-premium rounded-2xl p-6 border border-white/[0.06]">
-          <div className="mb-5">
-            <h2 className="text-base font-bold text-white">Actions Rapides</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Raccourcis vers les modules principaux</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Nouveau Patient",    href: "/dashboard/patients",     icon: Users,        color: "emerald" },
-              { label: "Demande d'Examen",   href: "/dashboard/exam-requests",icon: FlaskConical, color: "blue" },
-              { label: "Saisir Résultat",    href: "/dashboard/results",      icon: Activity,     color: "teal" },
-              { label: "Créer Facture",      href: "/dashboard/invoices",     icon: Receipt,      color: "amber" },
-            ].map(({ label, href, icon: Icon, color }) => {
-              const c: Record<string, string> = {
-                emerald: "border-emerald-500/15 hover:border-emerald-500/30 hover:bg-emerald-500/[0.05] text-emerald-400",
-                blue:    "border-blue-500/15 hover:border-blue-500/30 hover:bg-blue-500/[0.05] text-blue-400",
-                teal:    "border-teal-500/15 hover:border-teal-500/30 hover:bg-teal-500/[0.05] text-teal-400",
-                amber:   "border-amber-500/15 hover:border-amber-500/30 hover:bg-amber-500/[0.05] text-amber-400",
-              };
-              return (
-                <Link key={href} href={href}>
-                  <div className={`flex flex-col items-center gap-3 p-5 rounded-xl border transition-all duration-200 text-center cursor-pointer ${c[color]}`}>
-                    <Icon className="w-5 h-5" />
-                    <span className="text-xs font-semibold text-slate-300 leading-tight">{label}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          {/* IA summary */}
-          <div className="mt-4 p-3.5 rounded-xl border border-emerald-500/15 flex items-start gap-3" style={{ background: "rgba(16,185,129,0.04)" }}>
-            <Brain className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <div>
-              <div className="text-xs font-bold text-emerald-400 mb-0.5">Résumé IA du jour</div>
-              <p className="text-[11px] text-slate-500 leading-relaxed">
-                Activité stable, +12.5% de patients actifs. Aucune anomalie systémique détectée. 3 résultats critiques à valider.
-              </p>
-            </div>
-          </div>
+      {/* ── Résumé rôle ── */}
+      <div className="p-4 rounded-xl border border-emerald-500/15 flex items-start gap-3" style={{ background: "rgba(16,185,129,0.04)" }}>
+        <Brain className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+        <div>
+          <div className="text-xs font-bold text-emerald-400 mb-0.5">Votre espace {roleLabel}</div>
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            {{
+              ADMIN:        "Accès complet. Vous gérez les utilisateurs, patients, analyses, résultats, factures et paiements.",
+              RECEPTIONIST: "Vous enregistrez les patients, créez les demandes d'examens et gérez la facturation.",
+              COLLECTOR:    "Vous prenez en charge les demandes d'examens en attente et effectuez les prélèvements.",
+              LAB_TECH:     "Vous saisissez les résultats biologiques et gérez le catalogue d'analyses.",
+              DOCTOR:       "Vous consultez les résultats biologiques et les dossiers patients.",
+            }[role]}
+          </p>
         </div>
       </div>
     </div>
