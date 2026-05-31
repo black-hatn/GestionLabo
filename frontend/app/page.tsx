@@ -200,47 +200,6 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Dashboard preview card */}
-          <div className="animate-slide-up delay-300 mt-20 w-full max-w-5xl relative">
-            {/* Glow behind card */}
-            <div className="absolute -inset-8 bg-emerald-500/10 rounded-3xl blur-3xl opacity-60" />
-            <div className="relative rounded-2xl border border-white/[0.08] overflow-hidden shadow-card" style={{ background: "rgba(12,24,40,0.9)" }}>
-              {/* Fake browser bar */}
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]" style={{ background: "rgba(6,14,28,0.8)" }}>
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
-                </div>
-                <div className="flex-1 mx-3 h-5 rounded-md glass flex items-center justify-center">
-                  <span className="text-[10px] text-slate-500 font-mono">novabio.app/dashboard</span>
-                </div>
-              </div>
-              {/* Dashboard preview content */}
-              <div className="p-6 grid grid-cols-4 gap-4">
-                {stats.map(({ value, label, icon: Icon }) => (
-                  <div key={label} className="rounded-xl border border-white/[0.06] p-4 hover:border-emerald-500/20 transition-colors" style={{ background: "rgba(255,255,255,0.02)" }}>
-                    <Icon className="w-4 h-4 text-emerald-400 mb-2" />
-                    <div className="text-xl font-extrabold text-white font-display">{value}</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
-                  </div>
-                ))}
-              </div>
-              {/* Fake chart area */}
-              <div className="mx-6 mb-6 rounded-xl border border-white/[0.06] p-4 h-28 flex items-end gap-1.5" style={{ background: "rgba(255,255,255,0.02)" }}>
-                {[40, 65, 48, 80, 55, 90, 70, 85, 60, 95, 75, 88].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-sm transition-all"
-                    style={{
-                      height: `${h}%`,
-                      background: i === 11 ? "linear-gradient(to top, #059669, #10b981)" : "rgba(16,185,129,0.2)",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* ══════════════════════════════ STATS ════════════════════════ */}
