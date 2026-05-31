@@ -135,11 +135,23 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
 }
 
 // ── Detail Sheet ───────────────────────────────────────────────────────────
-function ExamRequestSheet({ er, open, onClose, onStatusChange }: {
+function allowedNextStatuses(role: string, current: ExamRequestStatus): ExamRequestStatus[] {
+  if (current === "TERMINE" || current === "ANNULE") return [];
+  if (role === "COLLECTOR") return current === "EN_ATTENTE" ? ["EN_COURS"] : [];
+  if (role === "LAB_TECH")  return current === "EN_COURS"   ? ["TERMINE", "ANNULE"] : [];
+  if (role === "ADMIN" || role === "RECEPTIONIST") {
+    return (["EN_ATTENTE", "EN_COURS", "TERMINE", "ANNULE"] as ExamRequestStatus[]).filter(s => s !== current);
+  }
+  return []; // DOCTOR: view only
+}
+
+function ExamRequestSheet({ er, open, onClose, onStatusChange, userRole }: {
   er: ExamRequest | null; open: boolean; onClose: () => void;
   onStatusChange: (id: string, s: ExamRequestStatus) => void;
+  userRole: string;
 }) {
   if (!open || !er) return null;
+  const nextStatuses = allowedNextStatuses(userRole, er.status);
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onClose} />
@@ -189,21 +201,19 @@ function ExamRequestSheet({ er, open, onClose, onStatusChange }: {
             </div>
           )}
 
-          {er.status !== "TERMINE" && er.status !== "ANNULE" && (
+          {nextStatuses.length > 0 && (
             <div className="p-4 rounded-xl dark:bg-white/[0.03] dark:border dark:border-white/[0.05] bg-slate-50 border border-slate-100">
               <div className="text-[10px] font-semibold dark:text-slate-500 text-slate-400 uppercase tracking-wide mb-3">Changer le statut</div>
               <div className="flex gap-2 flex-wrap">
-                {(["EN_ATTENTE", "EN_COURS", "TERMINE", "ANNULE"] as ExamRequestStatus[])
-                  .filter(s => s !== er.status)
-                  .map(s => {
-                    const c = STATUS_CFG[s];
-                    return (
-                      <button key={s} onClick={() => onStatusChange(er.id, s)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${c.cls}`}>
-                        {c.label}
-                      </button>
-                    );
-                  })}
+                {nextStatuses.map(s => {
+                  const c = STATUS_CFG[s];
+                  return (
+                    <button key={s} onClick={() => onStatusChange(er.id, s)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${c.cls}`}>
+                      {c.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -226,7 +236,9 @@ type ModalState =
 
 export default function ExamRequestsPage() {
   const { user } = useAuthStore();
-  const canWrite = user?.role === "ADMIN" || user?.role === "DOCTOR" || user?.role === "LAB_TECH";
+  const role = user?.role ?? "";
+  const canCreate = ["ADMIN", "RECEPTIONIST"].includes(role);
+  const canDelete = role === "ADMIN";
 
   const [requests, setRequests]     = useState<ExamRequest[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -341,7 +353,7 @@ export default function ExamRequestsPage() {
 
   return (
     <ProtectedRoute>
-      <RoleGuard allowedRoles={["ADMIN", "DOCTOR", "LAB_TECH"]}>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"]}>
         <div className="space-y-6 animate-fade-in">
 
           {/* Header */}
@@ -401,7 +413,7 @@ export default function ExamRequestsPage() {
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 Actualiser
               </Button>
-              {canWrite && (
+              {canCreate && (
                 <Button onClick={openCreate} className="btn-emerald h-10 px-4 gap-2 text-sm font-bold">
                   <Plus className="w-4 h-4" />
                   Nouvelle Demande
@@ -480,7 +492,7 @@ export default function ExamRequestsPage() {
                         dark:text-slate-400 text-slate-500 dark:hover:text-purple-400 hover:text-purple-600 transition-colors">
                       <Eye className="w-4 h-4" />
                     </button>
-                    {canWrite && (
+                    {canDelete && (
                       <button onClick={() => openDelete(er)} title="Supprimer"
                         className="w-8 h-8 rounded-lg flex items-center justify-center
                           dark:hover:bg-red-500/15 hover:bg-red-50
@@ -511,6 +523,7 @@ export default function ExamRequestsPage() {
           er={modal.type === "view" ? modal.er : null}
           onClose={closeModal}
           onStatusChange={handleStatusChange}
+          userRole={role}
         />
 
         <CreateExamRequestDialog

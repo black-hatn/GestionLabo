@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useAuthStore } from "@/lib/auth-store";
 import {
   Plus, Search, Edit2, Trash2, Eye, Loader2, AlertCircle,
   Users, Mail, Phone, MapPin, Calendar, RefreshCw, X,
@@ -267,6 +268,11 @@ export default function PatientsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const { user } = useAuthStore();
+  const canCreate = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
+  const canEdit   = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
+  const canDelete = user?.role === "ADMIN";
+
   const loadPatients = useCallback(async () => {
     try {
       setLoading(true);
@@ -330,7 +336,7 @@ export default function PatientsPage() {
 
   return (
     <ProtectedRoute>
-      <RoleGuard allowedRoles={["ADMIN", "DOCTOR", "LAB_TECH"]}>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"]}>
         <div className="space-y-6 animate-fade-in">
 
           {/* Header */}
@@ -366,10 +372,12 @@ export default function PatientsPage() {
                 <Button variant="outline" onClick={() => setViewMode(v => v === "grid" ? "table" : "grid")} className="btn-ghost h-10 px-3">
                   {viewMode === "grid" ? <LayoutList className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
                 </Button>
-                <Button onClick={openCreate} className="btn-emerald h-10 px-4 gap-2 text-sm font-bold">
-                  <Plus className="w-4 h-4" />
-                  Nouveau
-                </Button>
+                {canCreate && (
+                  <Button onClick={openCreate} className="btn-emerald h-10 px-4 gap-2 text-sm font-bold">
+                    <Plus className="w-4 h-4" />
+                    Nouveau
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -438,18 +446,22 @@ export default function PatientsPage() {
                         bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
                       <Eye className="w-3.5 h-3.5 inline mr-1" />Voir
                     </button>
+                    {canEdit && (
                     <button onClick={() => openEdit(p)}
                       className="flex-1 py-1.5 rounded-lg text-xs font-semibold
                         dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20
                         bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors">
                       <Edit2 className="w-3.5 h-3.5 inline mr-1" />Modifier
                     </button>
+                    )}
+                    {canDelete && (
                     <button onClick={() => openDelete(p)}
                       className="flex-1 py-1.5 rounded-lg text-xs font-semibold
                         dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20
                         bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                       <Trash2 className="w-3.5 h-3.5 inline mr-1" />Supprimer
                     </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -500,10 +512,10 @@ export default function PatientsPage() {
                         <td className="px-5 py-4 pr-6">
                           <div className="flex items-center justify-end gap-1">
                             {[
-                              { icon: Eye,    fn: () => openView(p),   color: "cyan"  },
-                              { icon: Edit2,  fn: () => openEdit(p),   color: "amber" },
-                              { icon: Trash2, fn: () => openDelete(p), color: "red"   },
-                            ].map(({ icon: Icon, fn, color }) => (
+                              { icon: Eye,    fn: () => openView(p),   color: "cyan",  show: true       },
+                              { icon: Edit2,  fn: () => openEdit(p),   color: "amber", show: canEdit    },
+                              { icon: Trash2, fn: () => openDelete(p), color: "red",   show: canDelete  },
+                            ].filter(a => a.show).map(({ icon: Icon, fn, color }) => (
                               <button key={color} onClick={fn}
                                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors
                                   dark:text-slate-400 text-slate-500

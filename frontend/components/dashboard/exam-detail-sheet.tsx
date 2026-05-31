@@ -9,13 +9,14 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onEdit: (exam: ExamData) => void;
+  canEdit?: boolean;
 }
 
 /**
  * ExamDetailSheet — panneau latéral (slide-in) pour visualiser les détails
  * d'un examen sans quitter la page. Pattern "Sheet" de shadcn/ui.
  */
-export function ExamDetailSheet({ exam, open, onClose, onEdit }: Props) {
+export function ExamDetailSheet({ exam, open, onClose, onEdit, canEdit = true }: Props) {
   if (!open || !exam) return null;
 
   const refValues = exam.reference_values
@@ -126,12 +127,14 @@ export function ExamDetailSheet({ exam, open, onClose, onEdit }: Props) {
           <Button variant="outline" onClick={onClose} className="flex-1 btn-ghost h-10">
             Fermer
           </Button>
-          <Button
-            onClick={() => { onClose(); onEdit(exam); }}
-            className="flex-1 btn-emerald h-10 text-sm font-bold"
-          >
-            Modifier
-          </Button>
+          {canEdit && (
+            <Button
+              onClick={() => { onClose(); onEdit(exam); }}
+              className="flex-1 btn-emerald h-10 text-sm font-bold"
+            >
+              Modifier
+            </Button>
+          )}
         </div>
       </aside>
     </>

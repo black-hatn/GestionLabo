@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/lib/auth-store";
 import resultService, { type ResultItem, type ResultStatus } from "@/services/api/result";
 import examRequestService from "@/services/api/exam-request";
@@ -198,8 +199,8 @@ function ResultFormDialog({
 }
 
 // ── Detail Sheet ───────────────────────────────────────────────────────────
-function ResultDetailSheet({ result, open, onClose, onEdit }: {
-  result: ResultItem | null; open: boolean; onClose: () => void; onEdit: (r: ResultItem) => void;
+function ResultDetailSheet({ result, open, onClose, onEdit, canEdit }: {
+  result: ResultItem | null; open: boolean; onClose: () => void; onEdit: (r: ResultItem) => void; canEdit: boolean;
 }) {
   if (!open || !result) return null;
   return (
@@ -255,9 +256,11 @@ function ResultDetailSheet({ result, open, onClose, onEdit }: {
 
         <div className="px-6 py-4 dark:border-t dark:border-white/[0.07] border-t border-slate-100 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1 btn-ghost h-10">Fermer</Button>
-          <Button onClick={() => { onClose(); onEdit(result); }} className="flex-1 btn-emerald h-10 text-sm font-bold">
-            Modifier
-          </Button>
+          {canEdit && (
+            <Button onClick={() => { onClose(); onEdit(result); }} className="flex-1 btn-emerald h-10 text-sm font-bold">
+              Modifier
+            </Button>
+          )}
         </div>
       </aside>
     </>
@@ -274,7 +277,8 @@ type ModalState =
 
 export default function ResultsPage() {
   const { user } = useAuthStore();
-  const canWrite = user?.role === "ADMIN" || user?.role === "LAB_TECH";
+  const canEdit   = ["ADMIN", "LAB_TECH"].includes(user?.role ?? "");
+  const canDelete = user?.role === "ADMIN";
 
   const [results, setResults]       = useState<ResultItem[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -390,6 +394,7 @@ export default function ResultsPage() {
 
   return (
     <ProtectedRoute>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"]}>
       <div className="space-y-6 animate-fade-in">
 
         {/* Header */}
@@ -463,7 +468,7 @@ export default function ResultsPage() {
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Actualiser
             </Button>
-            {canWrite && (
+            {canEdit && (
               <Button onClick={openCreate} className="btn-emerald h-10 px-4 gap-2 text-sm font-bold">
                 <Plus className="w-4 h-4" />
                 Nouveau Résultat
@@ -561,21 +566,21 @@ export default function ResultsPage() {
                               dark:text-slate-400 text-slate-500 dark:hover:text-cyan-400 hover:text-cyan-600 transition-colors">
                             <Eye className="w-4 h-4" />
                           </button>
-                          {canWrite && (
-                            <>
-                              <button onClick={() => openEdit(r)} title="Modifier"
-                                className="w-8 h-8 rounded-lg flex items-center justify-center
-                                  dark:hover:bg-amber-500/15 hover:bg-amber-50
-                                  dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600 transition-colors">
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button onClick={() => openDelete(r)} title="Supprimer"
-                                className="w-8 h-8 rounded-lg flex items-center justify-center
-                                  dark:hover:bg-red-500/15 hover:bg-red-50
-                                  dark:text-slate-400 text-slate-500 dark:hover:text-red-400 hover:text-red-600 transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
+                          {canEdit && (
+                            <button onClick={() => openEdit(r)} title="Modifier"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center
+                                dark:hover:bg-amber-500/15 hover:bg-amber-50
+                                dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600 transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => openDelete(r)} title="Supprimer"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center
+                                dark:hover:bg-red-500/15 hover:bg-red-50
+                                dark:text-slate-400 text-slate-500 dark:hover:text-red-400 hover:text-red-600 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           )}
                         </div>
                       </td>
@@ -608,6 +613,7 @@ export default function ResultsPage() {
         result={modal.type === "view" ? modal.result : null}
         onClose={closeModal}
         onEdit={openEdit}
+        canEdit={canEdit}
       />
 
       <ResultFormDialog
@@ -630,6 +636,7 @@ export default function ResultsPage() {
         onConfirm={handleDelete}
         onCancel={closeModal}
       />
+      </RoleGuard>
     </ProtectedRoute>
   );
 }

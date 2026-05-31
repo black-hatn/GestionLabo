@@ -8,13 +8,16 @@ from app.models.user import User, UserRole
 
 router = APIRouter()
 
+ALL_ROLES  = (UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.COLLECTOR, UserRole.LAB_TECH, UserRole.DOCTOR)
+WRITE_ROLES = (UserRole.ADMIN, UserRole.LAB_TECH)
+
 
 @router.get("/")
 def list_results(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH)),
+    current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
     return ResultService.list_results(db, page, limit)
 
@@ -23,7 +26,7 @@ def list_results(
 def create_result(
     result_create: ResultCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH)),
+    current_user: User = Depends(require_roles(*WRITE_ROLES)),
 ):
     return ResultService.create_result(db, result_create, current_user.id)
 
@@ -32,7 +35,7 @@ def create_result(
 def get_result(
     result_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH)),
+    current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
     return ResultService.get_result(db, result_id)
 
@@ -42,7 +45,7 @@ def update_result(
     result_id: str,
     result_update: ResultUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH)),
+    current_user: User = Depends(require_roles(*WRITE_ROLES)),
 ):
     return ResultService.update_result(db, result_id, result_update)
 
@@ -51,6 +54,6 @@ def update_result(
 def delete_result(
     result_id: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH)),
+    current_user: User = Depends(require_roles(*WRITE_ROLES)),
 ):
     return ResultService.delete_result(db, result_id)

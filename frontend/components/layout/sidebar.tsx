@@ -12,12 +12,12 @@ import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/lib/auth-store";
 
 const NAV_ITEMS = [
-  { label: "Tableau de Bord",       href: "/dashboard",              icon: LayoutDashboard, roles: ["ADMIN","DOCTOR","LAB_TECH","USER"] },
-  { label: "Patients",               href: "/dashboard/patients",     icon: Users,           roles: ["ADMIN","DOCTOR","LAB_TECH"] },
-  { label: "Catalogue Analyses",     href: "/dashboard/exams",        icon: Microscope,      roles: ["ADMIN","DOCTOR","LAB_TECH"] },
-  { label: "Demandes d'Examens",    href: "/dashboard/exam-requests", icon: ClipboardList,   roles: ["ADMIN","DOCTOR","LAB_TECH"] },
-  { label: "Résultats Biologiques", href: "/dashboard/results",       icon: FileSpreadsheet, roles: ["ADMIN","DOCTOR","LAB_TECH","USER"] },
-  { label: "Facturation",            href: "/dashboard/invoices",     icon: Receipt,         roles: ["ADMIN","USER"] },
+  { label: "Tableau de Bord",       href: "/dashboard",              icon: LayoutDashboard, roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Patients",               href: "/dashboard/patients",     icon: Users,           roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Catalogue Analyses",     href: "/dashboard/exams",        icon: Microscope,      roles: ["ADMIN","LAB_TECH","DOCTOR"] },
+  { label: "Demandes d'Examens",    href: "/dashboard/exam-requests", icon: ClipboardList,   roles: ["ADMIN","RECEPTIONIST","COLLECTOR","LAB_TECH","DOCTOR"] },
+  { label: "Résultats Biologiques", href: "/dashboard/results",       icon: FileSpreadsheet, roles: ["ADMIN","LAB_TECH","DOCTOR"] },
+  { label: "Facturation",            href: "/dashboard/invoices",     icon: Receipt,         roles: ["ADMIN","RECEPTIONIST"] },
   { label: "Paiements",              href: "/dashboard/payments",     icon: FileText,        roles: ["ADMIN"] },
 ];
 

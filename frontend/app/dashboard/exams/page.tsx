@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import examService from "@/services/api/exam";
+import { useAuthStore } from "@/lib/auth-store";
 import {
   AlertCircle, Plus, Edit2, Trash2, Eye, Loader2, Beaker,
   TrendingUp, Search, RefreshCw, CheckCircle2, XCircle,
@@ -16,6 +17,10 @@ import { ExamFormDialog }     from "@/components/dashboard/exam-form-dialog";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 
 export default function ExamsPage() {
+  const { user } = useAuthStore();
+  const canEdit   = ["ADMIN", "LAB_TECH"].includes(user?.role ?? "");
+  const canDelete = user?.role === "ADMIN";
+
   const [exams, setExams]           = useState<ExamData[]>([]);
   const [loading, setLoading]       = useState(true);
   const [loadError, setLoadError]   = useState<string | null>(null);
@@ -140,6 +145,7 @@ export default function ExamsPage() {
               </Button>
 
               {/* Add */}
+              {canEdit && (
               <Button
                 onClick={openCreate}
                 className="btn-emerald h-10 px-4 gap-2 text-sm font-bold"
@@ -147,6 +153,7 @@ export default function ExamsPage() {
                 <Plus className="w-4 h-4" />
                 Ajouter
               </Button>
+              )}
             </div>
 
             {/* Status filters */}
@@ -238,6 +245,7 @@ export default function ExamsPage() {
                     >
                       <Eye className="w-4 h-4" />
                     </button>
+                    {canEdit && (
                     <button
                       onClick={() => openEdit(exam)}
                       title="Modifier"
@@ -248,6 +256,8 @@ export default function ExamsPage() {
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
+                    )}
+                    {canDelete && (
                     <button
                       onClick={() => openDelete(exam)}
                       title="Supprimer"
@@ -258,6 +268,7 @@ export default function ExamsPage() {
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -299,6 +310,7 @@ export default function ExamsPage() {
           exam={modal.type === "view" ? modal.exam : null}
           onClose={closeModal}
           onEdit={openEdit}
+          canEdit={canEdit}
         />
 
         <ExamFormDialog

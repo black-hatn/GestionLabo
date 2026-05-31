@@ -11,13 +11,14 @@ from app.models.exam import Exam
 from app.models.user import User, UserRole
 from app.schemas.domain import ExamRequestCreate, ExamRequestRead, ExamRequestUpdate
 
-router = APIRouter(
-    dependencies=[Depends(require_roles(UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH))]
-)
+router = APIRouter()
+
+ALL_ROLES  = (UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.COLLECTOR, UserRole.LAB_TECH, UserRole.DOCTOR)
+CREATE_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
+STATUS_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.COLLECTOR, UserRole.LAB_TECH)
 
 
 def _enrich(db: Session, er: ExamRequest) -> dict:
-    """Attach patient_name and exam_name to an ExamRequest dict."""
     base = ExamRequestRead.model_validate(er).model_dump()
     patient = db.query(Patient).filter(Patient.id == er.patient_id).first()
     exam    = db.query(Exam).filter(Exam.id == er.exam_id).first()
@@ -35,6 +36,7 @@ def list_exam_requests(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
     total = db.query(func.count(ExamRequest.id)).scalar()
     items = (
@@ -45,11 +47,9 @@ def list_exam_requests(
         .all()
     )
     return {
-        "items":  [_enrich(db, er) for er in items],
-        "total":  total,
-        "page":   page,
-        "limit":  limit,
-        "pages":  max(1, math.ceil(total / limit)),
+        "items": [_enrich(db, er) for er in items],
+        "total": total, "page": page, "limit": limit,
+        "pages": max(1, math.ceil(total / limit)),
     }
 
 
@@ -57,7 +57,7 @@ def list_exam_requests(
 def create_exam_request(
     payload: ExamRequestCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(*CREATE_ROLES)),
 ):
     item = ExamRequest(**payload.model_dump())
     db.add(item)
@@ -70,6 +70,7 @@ def create_exam_request(
 def get_exam_request(
     request_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
     item = db.get(ExamRequest, request_id)
     if not item:
@@ -82,11 +83,27 @@ def update_exam_request(
     request_id: str,
     payload: ExamRequestUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(*STATUS_ROLES)),
 ):
     item = db.get(ExamRequest, request_id)
     if not item:
         raise HTTPException(status_code=404, detail="Demande non trouvée")
-    item.status = payload.status
+
+    # Règles de transition de statut
+    role = current_user.role
+    new_status = payload.status
+
+    if role == UserRole.COLLECTOR:
+        # Le préleveur peut seulement passer EN_ATTENTE → EN_COURS
+        if item.status.value != "EN_ATTENTE" or new_status != "EN_COURS":
+            raise HTTPException(status_code=403, detail="Le préleveur peut seulement passer EN_ATTENTE → EN_COURS")
+
+    if role == UserRole.LAB_TECH:
+        # Le technicien peut seulement passer EN_COURS → TERMINE ou ANNULE
+        if item.status.value != "EN_COURS" or new_status not in ("TERMINE", "ANNULE"):
+            raise HTTPException(status_code=403, detail="Le technicien peut seulement passer EN_COURS → TERMINE/ANNULE")
+
+    item.status = new_status
     db.commit()
     db.refresh(item)
     return _enrich(db, item)
@@ -96,6 +113,7 @@ def update_exam_request(
 def delete_exam_request(
     request_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
     item = db.get(ExamRequest, request_id)
     if not item:

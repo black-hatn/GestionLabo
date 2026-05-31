@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import invoiceService from "@/services/api/invoice";
 import { useAuthStore } from "@/lib/auth-store";
 import { AlertCircle, Plus, Eye, Edit2, Trash2, Download, Loader2, Receipt, TrendingUp } from "lucide-react";
@@ -14,7 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 
 export default function InvoicesPage() {
   const { user } = useAuthStore();
-  const isSimpleUser = !user?.role || user?.role?.toUpperCase() === "USER" || user?.role?.toUpperCase() === "UTILISATEUR";
+  // Only ADMIN and RECEPTIONIST can create/edit invoices
+  const canWrite = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
 
   const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +104,7 @@ export default function InvoicesPage() {
 
   return (
     <ProtectedRoute>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST"]}>
       <div className="space-y-8 animate-fade-in">
         {/* Professional Header Section */}
         <div className="bg-gradient-to-r from-warning-600 to-warning-700 rounded-2xl p-8 text-white shadow-lg animate-slide-up">
@@ -208,7 +211,7 @@ export default function InvoicesPage() {
                   className="pl-10 py-3 transition-all focus:ring-2 focus:ring-warning-500"
                 />
               </div>
-              {!isSimpleUser && (
+              {!!canWrite && (
                 <Link href="/dashboard/invoices/new" className="sm:w-auto">
                   <Button className="gap-2 w-full sm:w-auto bg-warning-600 hover:bg-warning-700 shadow-md hover:shadow-lg transition-all">
                     <Plus className="w-4 h-4" />
@@ -285,7 +288,7 @@ export default function InvoicesPage() {
                       <Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-warning-100 hover:text-warning-700 transition-colors">
                         <Download className="w-4 h-4" />
                       </Button>
-                      {!isSimpleUser && (
+                      {!!canWrite && (
                         <>
                           <Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-warning-100 hover:text-warning-700 transition-colors">
                             <Edit2 className="w-4 h-4" />
@@ -323,6 +326,7 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+      </RoleGuard>
     </ProtectedRoute>
   );
 }
