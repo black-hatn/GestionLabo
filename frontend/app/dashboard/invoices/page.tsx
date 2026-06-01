@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useAuthStore } from "@/lib/auth-store";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -12,11 +13,19 @@ import {
   Receipt, CheckCircle2, Clock, AlertTriangle, RefreshCw,
   FileText, Calendar, User, DollarSign, ChevronLeft, ChevronRight,
 } from "lucide-react";
+import type { InvoiceForPDF, PatientForPDF } from "@/lib/pdf/invoice-pdf";
+import { InvoiceDocument } from "@/lib/pdf/invoice-pdf";
+
+/* ── Chargement dynamique PDFDownloadLink (pas de SSR pour @react-pdf/renderer) ── */
+const PDFDownloadLink = dynamic(
+  () => import("@react-pdf/renderer").then(mod => mod.PDFDownloadLink),
+  { ssr: false }
+);
 
 /* ── Types ── */
 type InvoiceStatus = "BROUILLON" | "ENVOYEE" | "PAYEE" | "EN_RETARD" | "ANNULEE";
 type Invoice = InvoiceAPI;
-type Patient = Pick<PatientAPI, "id" | "first_name" | "last_name" | "record_number">;
+type Patient = Pick<PatientAPI, "id" | "first_name" | "last_name" | "record_number" | "email" | "phone" | "city">;
 
 /* ── Helpers ── */
 const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -52,6 +61,60 @@ function fmtAmount(n: number | string, currency = "XOF") {
 }
 function todayISO() { return new Date().toISOString().split("T")[0]; }
 function genNum() { return `FAC-${Date.now().toString().slice(-8)}`; }
+
+/* ── Bouton PDF téléchargement ── */
+function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient: Patient | undefined }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const invoiceData: InvoiceForPDF = {
+    id: invoice.id,
+    invoice_number: invoice.invoice_number,
+    total_amount: parseFloat(String(invoice.total_amount)),
+    paid_amount: parseFloat(String(invoice.paid_amount)),
+    status: invoice.status,
+    issue_date: invoice.issue_date,
+    due_date: invoice.due_date,
+    paid_date: invoice.paid_date ?? undefined,
+  };
+
+  const patientData: PatientForPDF = patient
+    ? {
+        first_name: patient.first_name,
+        last_name: patient.last_name,
+        email: patient.email ?? "",
+        phone: patient.phone ?? "",
+        city: patient.city ?? "",
+        record_number: patient.record_number,
+      }
+    : {
+        first_name: "Patient",
+        last_name: invoice.patient_id.slice(0, 8),
+        email: "",
+        phone: "",
+        city: "",
+      };
+
+  const filename = `Facture-${invoice.invoice_number}-${patientData.last_name}.pdf`;
+
+  return (
+    <PDFDownloadLink
+      document={<InvoiceDocument invoice={invoiceData} patient={patientData} payments={[]} />}
+      fileName={filename}
+    >
+      {({ loading }: { loading: boolean }) => (
+        <button
+          title="Télécharger PDF"
+          disabled={loading}
+          className="p-2 border-2 border-purple-500/30 text-purple-400 bg-transparent hover:bg-purple-500/10 hover:border-purple-500 transition-all disabled:opacity-40 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+        </button>
+      )}
+    </PDFDownloadLink>
+  );
+}
 
 /* ── Badge ── */
 function StatusBadge({ status }: { status: InvoiceStatus }) {
@@ -583,24 +646,30 @@ export default function InvoicesPage() {
                           </div>
                         </div>
                       </div>
-                      {canWrite && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => setModal({ type: "edit", inv })}
-                            className="p-2 border-2 border-amber-500/30 text-amber-400 bg-transparent hover:bg-amber-500/10 hover:border-amber-500 transition-all"
-                            title="Modifier"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(inv)}
-                            className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all"
-                            title="Supprimer"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <InvoiceDownloadButton
+                          invoice={inv}
+                          patient={patients.find(p => p.id === inv.patient_id)}
+                        />
+                        {canWrite && (
+                          <>
+                            <button
+                              onClick={() => setModal({ type: "edit", inv })}
+                              className="p-2 border-2 border-amber-500/30 text-amber-400 bg-transparent hover:bg-amber-500/10 hover:border-amber-500 transition-all"
+                              title="Modifier"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(inv)}
+                              className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

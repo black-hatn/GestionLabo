@@ -1,15 +1,27 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date
 
 from app.config.database import get_db
-from app.models.invoice import Invoice
+from app.models.invoice import Invoice, InvoiceStatus
 from app.schemas.domain import InvoiceCreate, InvoiceUpdate, InvoiceRead, PaginatedInvoiceResponse
 from app.schemas.common import MessageResponse
 from app.api.deps import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.utils.audit_log import AuditLog
+
+
+def _auto_mark_overdue(invoices: list, db: Session) -> bool:
+    """Mark invoices as EN_RETARD when due_date is past. Returns True if any change was made."""
+    changed = False
+    today = date.today()
+    for invoice in invoices:
+        if invoice.status not in (InvoiceStatus.PAYEE, InvoiceStatus.ANNULEE):
+            if invoice.due_date and invoice.due_date < today:
+                invoice.status = InvoiceStatus.EN_RETARD
+                changed = True
+    return changed
 
 router = APIRouter()
 
@@ -46,6 +58,10 @@ def list_invoices(
     offset = (page - 1) * limit
     items = db.execute(query.offset(offset).limit(limit)).scalars().all()
 
+    # Auto-workflow: marquer les factures en retard
+    if _auto_mark_overdue(list(items), db):
+        db.commit()
+
     result = {
         "items": items,
         "total": total,
@@ -71,7 +87,12 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this invoice")
     elif current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
-    
+
+    # Auto-workflow: marquer la facture en retard si nécessaire
+    if _auto_mark_overdue([invoice], db):
+        db.commit()
+        db.refresh(invoice)
+
     AuditLog.log_action(current_user.id, "GET_INVOICE", "invoice", invoice_id)
     return invoice
 

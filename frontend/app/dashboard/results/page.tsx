@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import {
   Plus, Search, Edit2, Eye, Trash2, Loader2, AlertCircle,
   CheckCircle2, TrendingUp, Activity, RefreshCw, X, Beaker,
-  FlaskConical, User, FileText, XCircle, Download,
+  FlaskConical, User, FileText, XCircle, Download, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import {
   useUpdateResult,
   useDeleteResult,
 } from "@/hooks/queries/use-results";
+import { toast } from "@/lib/toast-store";
+import apiClient from "@/services/api/client";
 
 // Lazy-load le composant PDF (bundle volumineux — chargement à la demande)
 const DownloadResultPDFButton = dynamic(
@@ -306,6 +308,22 @@ export default function ResultsPage() {
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Notify state — tracks which result is being notified
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
+
+  const handleNotify = async (r: ResultItem) => {
+    setNotifyingId(r.id);
+    try {
+      await apiClient.post(`/resultats/${r.id}/notify`);
+      toast.success(`Notification envoyée pour ${r.patient_name ?? r.id}`);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail ?? err?.message ?? "Erreur lors de l'envoi";
+      toast.error(detail);
+    } finally {
+      setNotifyingId(null);
+    }
+  };
+
   // Exam requests for the create form dropdown
   const [examRequests, setExamRequests] = useState<{ id: string; label: string }[]>([]);
 
@@ -568,6 +586,18 @@ export default function ResultsPage() {
                               dark:hover:bg-cyan-500/15 hover:bg-cyan-50
                               dark:text-slate-400 text-slate-500 dark:hover:text-cyan-400 hover:text-cyan-600 transition-colors">
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleNotify(r)}
+                            disabled={notifyingId === r.id}
+                            title="Notifier le patient par email"
+                            className="inline-flex items-center gap-1 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 text-xs px-2 py-1 rounded-lg
+                              bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {notifyingId === r.id
+                              ? <Loader2 className="w-3 h-3 animate-spin" />
+                              : <Mail className="w-3 h-3" />}
+                            Notifier
                           </button>
                           {canEdit && (
                             <button onClick={() => openEdit(r)} title="Modifier"

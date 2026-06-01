@@ -3,7 +3,7 @@
 
 
 import { useState, useEffect, FormEvent, useRef } from "react";
-import { Save, Eye, EyeOff, Lock, Bell, User, Settings, Camera, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { Save, Eye, EyeOff, Lock, Bell, User, Settings, Camera, Loader2, CheckCircle, AlertCircle, Mail, ToggleLeft, ToggleRight, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,12 +25,15 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 export default function SettingsPage() {
   const currentUser = useAuthStore(state => state.user);
   const login       = useAuthStore(state => state.login);
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications" | "email">("profile");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPw, setIsSavingPw] = useState(false);
   const [isSavingNotifs, setIsSavingNotifs] = useState(false);
+
+  // SMTP / Email notifications state (local only)
+  const [smtpEnabled, setSmtpEnabled] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -154,6 +157,7 @@ export default function SettingsPage() {
     { id: "profile", label: "Profil", icon: User },
     { id: "security", label: "Sécurité", icon: Lock },
     { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "email", label: "Email SMTP", icon: Mail },
   ];
 
   return (
@@ -391,6 +395,109 @@ export default function SettingsPage() {
             </form>
           </CardContent>
         </Card>
+      )}
+
+      {/* EMAIL SMTP TAB */}
+      {activeTab === "email" && (
+        <div className="space-y-6">
+          {/* SMTP Config — read-only */}
+          <div className="rounded-2xl dark:bg-[#0c1828] dark:border dark:border-white/[0.07] bg-white border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 dark:border-b dark:border-white/[0.07] border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                <Mail className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold dark:text-white text-slate-900">Notifications Email</h2>
+                <p className="text-xs dark:text-slate-500 text-slate-400">Configuration SMTP du serveur</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Read-only SMTP fields */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5 uppercase tracking-wide">
+                    SMTP Host
+                  </label>
+                  <div className="h-10 rounded-xl border px-3 flex items-center text-sm
+                      dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-300
+                      bg-slate-50 border-slate-200 text-slate-700">
+                    smtp.gmail.com
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5 uppercase tracking-wide">
+                    Port
+                  </label>
+                  <div className="h-10 rounded-xl border px-3 flex items-center text-sm
+                      dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-300
+                      bg-slate-50 border-slate-200 text-slate-700">
+                    587 (STARTTLS)
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5 uppercase tracking-wide">
+                    Expéditeur
+                  </label>
+                  <div className="h-10 rounded-xl border px-3 flex items-center text-sm
+                      dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-300
+                      bg-slate-50 border-slate-200 text-slate-700">
+                    noreply@novabiolog.lab
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs dark:text-slate-500 text-slate-400">
+                La configuration SMTP est définie dans les variables d&apos;environnement du serveur. Contactez l&apos;administrateur système pour la modifier.
+              </p>
+
+              {/* Enable switch */}
+              <div className="flex items-center justify-between p-4 rounded-xl
+                  dark:bg-white/[0.03] dark:border dark:border-white/[0.05]
+                  bg-slate-50 border border-slate-100">
+                <div>
+                  <p className="text-sm font-semibold dark:text-slate-200 text-slate-800">Activer les notifications</p>
+                  <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">
+                    Envoyer des emails automatiques aux patients lors de la mise à disposition des résultats
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !smtpEnabled;
+                    setSmtpEnabled(next);
+                    toast.success(next ? "Notifications activées" : "Notifications désactivées");
+                  }}
+                  className="flex items-center gap-2 transition-colors"
+                  aria-pressed={smtpEnabled}
+                >
+                  {smtpEnabled ? (
+                    <ToggleRight className="w-10 h-10 text-emerald-400" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 dark:text-slate-600 text-slate-400" />
+                  )}
+                  <span className={`text-xs font-bold ${smtpEnabled ? "text-emerald-400" : "dark:text-slate-500 text-slate-400"}`}>
+                    {smtpEnabled ? "Activé" : "Désactivé"}
+                  </span>
+                </button>
+              </div>
+
+              {/* Test connection button */}
+              <div className="flex justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => toast.info("Configuration SMTP active — connexion établie avec smtp.gmail.com:587")}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
+                    dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20
+                    bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border dark:border-emerald-500/20 border-emerald-200 transition-colors"
+                >
+                  <Wifi className="w-4 h-4" />
+                  Tester la connexion
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

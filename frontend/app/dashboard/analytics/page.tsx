@@ -1,27 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, Download, BarChart3, LineChart as LineChartIcon } from "lucide-react";
+import { TrendingUp, Download, BarChart3, LineChart as LineChartIcon, Loader2 } from "lucide-react";
+import { getAnalyticsSummary, type AnalyticsSummary } from "@/services/api/analytics";
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadSummary() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getAnalyticsSummary();
+        setSummary(data);
+      } catch {
+        setError("Impossible de charger les données analytiques.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSummary();
+  }, []);
 
   const monthlyData = [
     { name: "Jan", patients: 65, exams: 45, results: 38 },
-    { name: "Feb", patients: 72, exams: 52, results: 42 },
+    { name: "Fév", patients: 72, exams: 52, results: 42 },
     { name: "Mar", patients: 78, exams: 61, results: 55 },
-    { name: "Apr", patients: 85, exams: 68, results: 62 },
-    { name: "May", patients: 92, exams: 75, results: 70 },
+    { name: "Avr", patients: 85, exams: 68, results: 62 },
+    { name: "Mai", patients: 92, exams: 75, results: 70 },
     { name: "Jun", patients: 98, exams: 82, results: 78 },
   ];
 
   const invoiceStatus = [
-    { name: "Payée", value: 1240, color: "#10b981" },
-    { name: "En attente", value: 340, color: "#f59e0b" },
-    { name: "En retard", value: 180, color: "#ef4444" },
+    { name: "Payée", value: summary?.invoices_by_status?.PAYEE ?? 0, color: "#10b981" },
+    { name: "Envoyée", value: summary?.invoices_by_status?.ENVOYEE ?? 0, color: "#f59e0b" },
+    { name: "En retard", value: summary?.invoices_by_status?.EN_RETARD ?? 0, color: "#ef4444" },
+    { name: "Brouillon", value: summary?.invoices_by_status?.BROUILLON ?? 0, color: "#6b7280" },
+    { name: "Annulée", value: summary?.invoices_by_status?.ANNULEE ?? 0, color: "#d1d5db" },
   ];
 
   const examsByType = [
@@ -32,11 +54,37 @@ export default function AnalyticsPage() {
     { name: "Scanner", value: 95 },
   ];
 
+  const formatRevenue = (value: number) => {
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+    return value.toFixed(0);
+  };
+
   const kpis = [
-    { label: "Patients actifs", value: "1,234", change: "+12%", positive: true, icon: "👥" },
-    { label: "Examen moyen/jour", value: "34", change: "+8%", positive: true, icon: "📋" },
-    { label: "Résultats en retard", value: "12", change: "-5%", positive: true, icon: "⏱️" },
-    { label: "Revenu total", value: "125K€", change: "+18%", positive: true, icon: "💰" },
+    {
+      label: "Patients actifs",
+      value: loading ? "…" : (summary?.active_patients ?? 0).toLocaleString("fr-FR"),
+      change: loading ? "" : `${summary?.total_patients ?? 0} total`,
+      icon: "👥",
+    },
+    {
+      label: "Demandes d'examen",
+      value: loading ? "…" : (summary?.total_exam_requests ?? 0).toLocaleString("fr-FR"),
+      change: loading ? "" : `${summary?.exam_requests_by_status?.EN_COURS ?? 0} en cours`,
+      icon: "📋",
+    },
+    {
+      label: "Factures",
+      value: loading ? "…" : (summary?.total_invoices ?? 0).toLocaleString("fr-FR"),
+      change: loading ? "" : `${summary?.invoices_by_status?.EN_RETARD ?? 0} en retard`,
+      icon: "🧾",
+    },
+    {
+      label: "Revenu encaissé",
+      value: loading ? "…" : `${formatRevenue(summary?.total_revenue ?? 0)} XOF`,
+      change: loading ? "" : `${formatRevenue(summary?.pending_revenue ?? 0)} XOF en attente`,
+      icon: "💰",
+    },
   ];
 
   return (
@@ -53,6 +101,13 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Time Range Selector */}
       <div className="flex gap-2 flex-wrap">
@@ -75,13 +130,22 @@ export default function AnalyticsPage() {
             <div className="absolute top-0 right-0 w-20 h-20 opacity-10 rounded-full blur-2xl bg-indigo-500"></div>
             <CardContent className="pt-6 relative z-10">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-semibold text-neutral-600 mb-2">{kpi.label}</p>
-                  <p className="text-3xl font-bold text-neutral-900">{kpi.value}</p>
-                  <div className="flex items-center gap-1 mt-3">
-                    <TrendingUp className="w-4 h-4 text-secondary-600" />
-                    <span className="text-sm font-medium text-secondary-600">{kpi.change}</span>
-                  </div>
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                      <span className="text-neutral-400 text-sm">Chargement…</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-3xl font-bold text-neutral-900">{kpi.value}</p>
+                      <div className="flex items-center gap-1 mt-3">
+                        <TrendingUp className="w-4 h-4 text-secondary-600" />
+                        <span className="text-sm font-medium text-secondary-600">{kpi.change}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="text-3xl">{kpi.icon}</div>
               </div>
@@ -129,26 +193,32 @@ export default function AnalyticsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={invoiceStatus}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={60}
-                  outerRadius={110}
-                  paddingAngle={2}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {invoiceStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value}€`} />
-              </PieChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="flex items-center justify-center h-[300px]">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={invoiceStatus.filter((s) => s.value > 0)}
+                    cx="50%"
+                    cy="45%"
+                    innerRadius={60}
+                    outerRadius={110}
+                    paddingAngle={2}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {invoiceStatus.filter((s) => s.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => `${value} facture(s)`} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>
