@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import {
   Plus, Search, Edit2, Eye, Trash2, Loader2, AlertCircle,
   CheckCircle2, TrendingUp, Activity, RefreshCw, X, Beaker,
-  FlaskConical, User, FileText, XCircle, Download, Mail,
+  FlaskConical, User, FileText, XCircle, Download, Mail, FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -599,6 +599,14 @@ export default function ResultsPage() {
                               : <Mail className="w-3 h-3" />}
                             Notifier
                           </button>
+                          <span
+                            title="Télécharger le rapport PDF"
+                            className="inline-flex items-center gap-1 dark:bg-violet-500/10 dark:text-violet-400 dark:hover:bg-violet-500/20 rounded-lg px-2 py-1 text-xs
+                              bg-violet-50 text-violet-600 hover:bg-violet-100 transition-colors cursor-pointer"
+                          >
+                            <FileDown className="w-3 h-3 shrink-0" />
+                            <DownloadResultPDFButton result={r} className="text-xs" />
+                          </span>
                           {canEdit && (
                             <button onClick={() => openEdit(r)} title="Modifier"
                               className="w-8 h-8 rounded-lg flex items-center justify-center

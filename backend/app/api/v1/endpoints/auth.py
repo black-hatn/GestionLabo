@@ -9,6 +9,7 @@ from app.api.deps import get_current_user
 from app.config.database import get_db
 from app.config.security import create_access_token, create_refresh_token, create_token, decode_token, hash_password, verify_password
 from app.models.user import User
+from app.models.password_reset_token import PasswordResetToken
 from app.schemas.common import MessageResponse
 from app.schemas.domain import LoginRequest, RefreshRequest, TokenPair, UserCreate, UserRead
 from app.utils.two_factor import TwoFactorService
@@ -52,17 +53,19 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/seed", response_model=MessageResponse)
 def seed(db: Session = Depends(get_db)):
-    existing = db.scalar(select(User).where(User.email == "nouradinezakariamahamat2@gmail.com"))
+    from app.config.settings import get_settings
+    _s = get_settings()
+    existing = db.scalar(select(User).where(User.email == _s.ADMIN_EMAIL))
     if existing:
         return MessageResponse(message="Admin already seeded")
     import uuid
     from datetime import datetime
     user = User(
         id=str(uuid.uuid4()),
-        email="nouradinezakariamahamat2@gmail.com",
-        password_hash=hash_password("Fatmah2125"),
-        first_name="Nouradine",
-        last_name="Zakaria",
+        email=_s.ADMIN_EMAIL,
+        password_hash=hash_password(_s.ADMIN_PASSWORD),
+        first_name="Admin",
+        last_name="NovaBio",
         role="ADMIN",
         is_active=True,
         created_at=datetime.utcnow(),
@@ -157,10 +160,15 @@ def password_reset_request(body: PasswordResetRequestBody, db: Session = Depends
     user = db.scalar(select(User).where(User.email == body.email))
     if user:
         code = "".join(random.choices(string.digits, k=6))
-        _reset_tokens[body.email] = {
-            "code": code,
-            "expires": datetime.utcnow() + timedelta(minutes=15),
-        }
+        # Delete any existing tokens for this email
+        db.query(PasswordResetToken).filter(PasswordResetToken.email == body.email).delete()
+        # Persist new token to DB
+        db.add(PasswordResetToken(
+            email=body.email,
+            code=code,
+            expires_at=datetime.utcnow() + timedelta(minutes=15),
+        ))
+        db.commit()
         # Send email (graceful fail)
         try:
             from app.utils.email_service import send_email
@@ -175,11 +183,16 @@ def password_reset_request(body: PasswordResetRequestBody, db: Session = Depends
 
 
 @router.post("/password-reset-verify")
-def password_reset_verify(body: PasswordResetVerifyBody):
-    token_data = _reset_tokens.get(body.email)
-    if not token_data or token_data["expires"] < datetime.utcnow():
+def password_reset_verify(body: PasswordResetVerifyBody, db: Session = Depends(get_db)):
+    token = (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.email == body.email, PasswordResetToken.used == False)  # noqa: E712
+        .order_by(PasswordResetToken.created_at.desc())
+        .first()
+    )
+    if not token or token.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Code invalide ou expiré")
-    if token_data["code"] != body.code:
+    if token.code != body.code:
         raise HTTPException(status_code=400, detail="Code incorrect")
     # Issue a short-lived reset token (type="reset")
     reset_token = create_token(
@@ -207,6 +220,7 @@ def password_reset_confirm(body: PasswordResetConfirmBody, db: Session = Depends
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     user.password_hash = hash_password(body.new_password)
+    # Mark all reset tokens for this email as used
+    db.query(PasswordResetToken).filter(PasswordResetToken.email == email).update({"used": True})
     db.commit()
-    _reset_tokens.pop(email, None)
     return {"message": "Mot de passe réinitialisé avec succès"}

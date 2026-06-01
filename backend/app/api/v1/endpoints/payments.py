@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
@@ -47,7 +48,7 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
     invoice.paid_amount = Decimal(invoice.paid_amount) + Decimal(payload.amount)
     if invoice.paid_amount >= invoice.total_amount:
         invoice.status = InvoiceStatus.PAYEE
-        invoice.paid_date = payment.paid_at.date()
+        invoice.paid_date = date.today()
     db.add(payment)
     db.commit()
     db.refresh(payment)

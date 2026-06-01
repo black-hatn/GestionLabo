@@ -1,12 +1,29 @@
 /**
- * Générateur de rapport PDF — Résultat biologique
- * Utilise @react-pdf/renderer pour créer un document officiel
- * avec logo NovaBio, données patient, résultats et validation.
+ * Générateur de rapport de résultat PDF — NovaBio Lab
+ * Utilise @react-pdf/renderer pour produire un compte-rendu d'analyse A4.
  */
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Document, Page, Text, View, StyleSheet, PDFDownloadLink,
 } from "@react-pdf/renderer";
 import type { ResultItem } from "@/services/api/result";
+
+/* ── Standalone type (for dynamic import usage without full ResultItem) ── */
+export interface ResultForPDF {
+  id: string;
+  value: string;
+  reference_value?: string | null;
+  status: string;
+  notes?: string | null;
+  tested_at: string;
+  exam_name?: string;
+  exam_unit?: string;
+  patient_name?: string;
+  record_number?: string;
+  tested_by_name?: string;
+}
 
 /* ── Palette NovaBio ── */
 const COLORS = {
@@ -17,8 +34,15 @@ const COLORS = {
   slate500:  "#64748b",
   slate300:  "#cbd5e1",
   white:     "#ffffff",
+  pureWhite: "#ffffff",
+  lightBg:   "#f1f5f9",
   red:       "#ef4444",
   amber:     "#f59e0b",
+  orange:    "#f97316",
+  green:     "#22c55e",
+  border:    "#e2e8f0",
+  dark:      "#0f172a",
+  muted:     "#64748b",
 };
 
 const styles = StyleSheet.create({
@@ -133,19 +157,25 @@ function formatDate(iso: string): string {
 }
 
 function statusColor(status: string): string {
-  if (status === "CRITIQUE") return COLORS.red;
-  if (status === "ANORMAL")  return COLORS.amber;
-  return COLORS.emerald;
+  switch (status.toUpperCase()) {
+    case "CRITIQUE": return COLORS.red;
+    case "ANORMAL":  return COLORS.orange;
+    case "NORMAL":   return COLORS.green;
+    default:         return COLORS.muted;
+  }
 }
 
 function statusLabel(status: string): string {
-  if (status === "CRITIQUE") return "CRITIQUE";
-  if (status === "ANORMAL")  return "ANORMAL";
-  return "NORMAL";
+  switch (status.toUpperCase()) {
+    case "CRITIQUE": return "CRITIQUE";
+    case "ANORMAL":  return "ANORMAL";
+    case "NORMAL":   return "NORMAL";
+    default:         return status.toUpperCase();
+  }
 }
 
 /* ── Document PDF ── */
-export function ResultReport({ result }: { result: ResultItem }) {
+export function ResultReport({ result }: { result: ResultItem | ResultForPDF }) {
   const color = statusColor(result.status);
 
   return (
@@ -159,15 +189,16 @@ export function ResultReport({ result }: { result: ResultItem }) {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.logoName}>
-              Nova<Text style={styles.logoNameAccent}>Bio</Text> Lab
+            <Text style={styles.logoName}>NovaBio Lab</Text>
+            <Text style={styles.logoSub}>LABORATOIRE D'ANALYSES MÉDICALES</Text>
+            <Text style={[styles.logoSub, { letterSpacing: 0, marginTop: 2 }]}>
+              Quartier Moursal, N'Djamena, Tchad
             </Text>
-            <Text style={styles.logoSub}>PLATEFORME MÉDICALE</Text>
           </View>
           <View style={styles.headerRight}>
             <Text style={styles.docTitle}>RAPPORT DE RÉSULTAT</Text>
             <Text style={styles.docDate}>
-              Émis le {formatDate(result.created_at)}
+              Émis le {formatDate(result.tested_at)}
             </Text>
             <Text style={[styles.docDate, { marginTop: 2 }]}>
               Réf. {result.id.slice(0, 8).toUpperCase()}
@@ -265,7 +296,9 @@ export function ResultReport({ result }: { result: ResultItem }) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>NovaBio Lab Platform — Document officiel</Text>
+          <Text style={styles.footerText}>
+            NovaBio Lab — Quartier Moursal, N'Djamena, Tchad — Tél : +235 99 00 00 00
+          </Text>
           <Text style={styles.footerText}>
             Ce document est généré automatiquement et constitue un résultat officiel.
           </Text>
@@ -277,15 +310,24 @@ export function ResultReport({ result }: { result: ResultItem }) {
   );
 }
 
-/* ── Bouton de téléchargement ── */
+/* ── Alias: ResultReportDocument (required export) ── */
+export function ResultReportDocument({ result }: { result: ResultForPDF }) {
+  return <ResultReport result={result} />;
+}
+
+/* ── Bouton de téléchargement (legacy — accepts full ResultItem) ── */
 export function DownloadResultPDFButton({
   result,
   className = "",
 }: {
-  result: ResultItem;
+  result: ResultItem | ResultForPDF;
   className?: string;
 }) {
-  const filename = `NovaBio-Resultat-${result.patient_name?.replace(/\s+/g, "-") || result.id.slice(0, 8)}-${new Date(result.tested_at).toISOString().split("T")[0]}.pdf`;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const filename = `NovaBio-Resultat-${(result.patient_name ?? result.id.slice(0, 8)).replace(/\s+/g, "-")}-${new Date(result.tested_at).toISOString().split("T")[0]}.pdf`;
 
   return (
     <PDFDownloadLink
@@ -297,6 +339,33 @@ export function DownloadResultPDFButton({
           {loading ? "Génération…" : "Télécharger PDF"}
         </span>
       )}
+    </PDFDownloadLink>
+  );
+}
+
+/* ── ResultDownloadButton (standalone, for dynamic import in row) ── */
+export function ResultDownloadButton({
+  result,
+  className,
+}: {
+  result: ResultForPDF;
+  className?: string;
+}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const safeName = (result.patient_name ?? result.id).replace(/\s+/g, "-");
+  const safeExam = (result.exam_name ?? "analyse").replace(/\s+/g, "-");
+  const filename = `Resultat-${safeExam}-${safeName}.pdf`;
+
+  return (
+    <PDFDownloadLink
+      document={<ResultReportDocument result={result} />}
+      fileName={filename}
+      className={className}
+    >
+      {({ loading }) => (loading ? "Génération..." : "Télécharger PDF")}
     </PDFDownloadLink>
   );
 }

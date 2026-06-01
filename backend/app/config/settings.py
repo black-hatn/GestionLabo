@@ -20,7 +20,14 @@ class Settings(BaseSettings):
     DATABASE_URL_SQLITE: str = "sqlite:///./laboratoire_examens.db"
     USE_SQLITE_DEV: bool = True
 
-    CORS_ORIGINS: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
+    CORS_ORIGINS: list[str] = Field(default_factory=lambda: [
+        "http://localhost:3000",
+        "https://novabio-labo-black-hatns-projects.vercel.app",
+        "https://novabio-labo.vercel.app",
+    ])
+
+    ADMIN_EMAIL: str = Field(default="admin@novabiolog.lab")
+    ADMIN_PASSWORD: str = Field(default="ChangeMe123!")
 
     SMTP_HOST: str = Field(default="smtp.gmail.com")
     SMTP_PORT: int = Field(default=587)

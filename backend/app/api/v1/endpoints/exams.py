@@ -59,10 +59,8 @@ def create_exam(payload: ExamCreate, db: Session = Depends(get_db), current_user
         id=str(uuid.uuid4()),
         name=payload.name,
         description=payload.description,
-        category=payload.category,
+        reference_values=payload.reference_values or {},
         unit=payload.unit,
-        reference_min=payload.reference_min,
-        reference_max=payload.reference_max,
     )
     
     db.add(exam)

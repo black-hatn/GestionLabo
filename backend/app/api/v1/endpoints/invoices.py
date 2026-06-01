@@ -104,20 +104,21 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), curren
     invoice = Invoice(
         id=str(uuid.uuid4()),
         patient_id=payload.patient_id,
-        number=f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-        amount=payload.amount,
-        tax_amount=payload.tax_amount,
+        invoice_number=payload.invoice_number,
         total_amount=payload.total_amount,
-        status="DRAFT",
+        paid_amount=0,
+        status=InvoiceStatus.BROUILLON,
+        currency=payload.currency,
+        payment_type=payload.payment_type,
+        issue_date=payload.issue_date,
         due_date=payload.due_date,
-        notes=payload.notes,
     )
-    
+
     db.add(invoice)
     db.commit()
     db.refresh(invoice)
-    
-    AuditLog.log_action(current_user.id, "CREATE_INVOICE", "invoice", invoice.id, f"amount={invoice.amount}")
+
+    AuditLog.log_action(current_user.id, "CREATE_INVOICE", "invoice", invoice.id, f"invoice_number={invoice.invoice_number}")
     return invoice
 
 @router.put("/{invoice_id}", response_model=InvoiceRead)

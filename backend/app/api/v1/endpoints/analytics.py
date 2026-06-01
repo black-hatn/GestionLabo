@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import select, func
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select, func, cast, Date as SQLDate
 from sqlalchemy.orm import Session
 from datetime import date
 
@@ -84,4 +84,46 @@ def get_analytics_summary(
         "total_exam_requests": total_exam_requests,
         "exam_requests_by_status": exam_requests_by_status,
         "total_payments": total_payments,
+    }
+
+
+@router.get("/time-series")
+def get_time_series(
+    days: int = Query(30, ge=7, le=365),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns daily counts for the last N days."""
+    from datetime import timedelta
+
+    end = date.today()
+    start = end - timedelta(days=days)
+
+    # Daily patient registrations
+    patient_daily = db.execute(
+        select(
+            cast(Patient.created_at, SQLDate).label("day"),
+            func.count(Patient.id).label("count")
+        )
+        .where(cast(Patient.created_at, SQLDate) >= start)
+        .group_by(cast(Patient.created_at, SQLDate))
+        .order_by(cast(Patient.created_at, SQLDate))
+    ).all()
+
+    # Daily invoices created
+    invoice_daily = db.execute(
+        select(
+            cast(Invoice.created_at, SQLDate).label("day"),
+            func.count(Invoice.id).label("count"),
+            func.sum(Invoice.paid_amount).label("revenue")
+        )
+        .where(cast(Invoice.created_at, SQLDate) >= start)
+        .group_by(cast(Invoice.created_at, SQLDate))
+        .order_by(cast(Invoice.created_at, SQLDate))
+    ).all()
+
+    return {
+        "period_days": days,
+        "patients_daily": [{"date": str(r.day), "count": r.count} for r in patient_daily],
+        "invoices_daily": [{"date": str(r.day), "count": r.count, "revenue": float(r.revenue or 0)} for r in invoice_daily],
     }

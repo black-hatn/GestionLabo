@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { TrendingUp, Download, BarChart3, LineChart as LineChartIcon, Loader2 } from "lucide-react";
 import { getAnalyticsSummary, type AnalyticsSummary } from "@/services/api/analytics";
+import apiClient from "@/services/api/client";
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [tsData, setTsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,6 +22,8 @@ export default function AnalyticsPage() {
         setError(null);
         const data = await getAnalyticsSummary();
         setSummary(data);
+        const ts = await apiClient.get('/analytics/time-series?days=30');
+        setTsData(ts.data);
       } catch {
         setError("Impossible de charger les données analytiques.");
       } finally {
@@ -29,13 +33,13 @@ export default function AnalyticsPage() {
     loadSummary();
   }, []);
 
-  const monthlyData = [
-    { name: "Jan", patients: 65, exams: 45, results: 38 },
-    { name: "Fév", patients: 72, exams: 52, results: 42 },
-    { name: "Mar", patients: 78, exams: 61, results: 55 },
-    { name: "Avr", patients: 85, exams: 68, results: 62 },
-    { name: "Mai", patients: 92, exams: 75, results: 70 },
-    { name: "Jun", patients: 98, exams: 82, results: 78 },
+  const monthlyData = tsData?.patients_daily?.map((d: any) => ({
+    name: new Date(d.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
+    patients: d.count,
+    exams: 0,
+    results: 0,
+  })) ?? [
+    { name: "—", patients: 0, exams: 0, results: 0 },
   ];
 
   const invoiceStatus = [
