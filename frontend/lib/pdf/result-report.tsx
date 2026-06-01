@@ -243,7 +243,7 @@ export function ResultReport({ result }: { result: ResultItem | ResultForPDF }) 
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Technicien</Text>
-              <Text style={styles.value}>{result.tested_by_name || result.tested_by}</Text>
+              <Text style={styles.value}>{result.tested_by_name || "—"}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Date d'analyse</Text>
