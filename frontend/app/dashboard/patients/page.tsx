@@ -110,8 +110,8 @@ function PatientFormDialog({ mode, patient, open, onClose, saving, error, onSubm
             {mode === "create" && field("N° Dossier", "record_number", { placeholder: "ex: PAT-0001" })}
 
             <div className="grid grid-cols-2 gap-3">
-              {field("Prénom", "first_name", { placeholder: "ex: Aminata" })}
-              {field("Nom", "last_name", { placeholder: "ex: Traoré" })}
+              {field("Prénom", "first_name", { placeholder: "ex: Mahamat" })}
+              {field("Nom", "last_name", { placeholder: "ex: Abakar" })}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -136,15 +136,15 @@ function PatientFormDialog({ mode, patient, open, onClose, saving, error, onSubm
               </div>
             </div>
 
-            {field("Email", "email", { type: "email", placeholder: "ex: patient@exemple.fr" })}
+            {field("Email", "email", { type: "email", placeholder: "ex: patient@gmail.com" })}
 
             <div className="grid grid-cols-2 gap-3">
-              {field("Téléphone", "phone", { placeholder: "ex: 77 123 45 67" })}
-              {field("Ville", "city", { placeholder: "ex: Dakar" })}
+              {field("Téléphone", "phone", { placeholder: "ex: 66 12 34 56" })}
+              {field("Ville", "city", { placeholder: "ex: N'Djamena" })}
             </div>
 
-            {field("Adresse", "address", { placeholder: "ex: Rue 10, Médina", required: false })}
-            {field("N° Assurance", "insurance_number", { placeholder: "ex: CNAM-00123", required: false })}
+            {field("Adresse", "address", { placeholder: "ex: Quartier Moursal, Av. Charles de Gaulle", required: false })}
+            {field("N° Assurance", "insurance_number", { placeholder: "ex: CNPS-00123", required: false })}
 
             {mode === "edit" && (
               <div className="flex items-center gap-3 p-3 rounded-xl
