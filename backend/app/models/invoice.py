@@ -25,6 +25,8 @@ class Invoice(Base):
     total_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     paid_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
     status: Mapped[InvoiceStatus] = mapped_column(Enum(InvoiceStatus), default=InvoiceStatus.BROUILLON, nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), default="XOF", nullable=False)
+    payment_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     issue_date: Mapped[date] = mapped_column(Date, nullable=False)
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
     paid_date: Mapped[date | None] = mapped_column(Date, nullable=True)

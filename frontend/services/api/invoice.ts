@@ -7,6 +7,8 @@ export interface Invoice {
   total_amount: number;
   paid_amount: number;
   status: string;
+  currency: string;
+  payment_type?: string | null;
   issue_date: string;
   due_date: string;
   paid_date?: string;

@@ -27,11 +27,28 @@ const STATUS_CONFIG: Record<InvoiceStatus, { label: string; color: string; icon:
   ANNULEE:    { label: "Annulée",    color: "text-slate-500 bg-slate-500/10 border-slate-500/20", icon: X },
 };
 
+type Currency = "XOF" | "EUR" | "USD";
+const CURRENCY_CONFIG: Record<Currency, { label: string; symbol: string; flag: string }> = {
+  XOF: { label: "FCFA",   symbol: "FCFA", flag: "🌍" },
+  EUR: { label: "Euro",   symbol: "€",    flag: "🇪🇺" },
+  USD: { label: "Dollar", symbol: "$",    flag: "🇺🇸" },
+};
+
+const PAYMENT_TYPES = [
+  { value: "ESPECES",   label: "💵 Espèces" },
+  { value: "CARTE",     label: "💳 Carte bancaire" },
+  { value: "VIREMENT",  label: "🏦 Virement bancaire" },
+  { value: "MOBILE",    label: "📱 Mobile Money" },
+  { value: "CHEQUE",    label: "📄 Chèque" },
+];
+
 function fmt(d: string) {
   return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 }
-function fmtAmount(n: number | string) {
-  return parseFloat(String(n)).toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
+function fmtAmount(n: number | string, currency = "XOF") {
+  const val = parseFloat(String(n)).toLocaleString("fr-FR", { minimumFractionDigits: 2 });
+  const cfg = CURRENCY_CONFIG[currency as Currency] ?? CURRENCY_CONFIG.XOF;
+  return currency === "EUR" ? `${val} ${cfg.symbol}` : currency === "USD" ? `${cfg.symbol}${val}` : `${val} ${cfg.symbol}`;
 }
 function todayISO() { return new Date().toISOString().split("T")[0]; }
 function genNum() { return `FAC-${Date.now().toString().slice(-8)}`; }
@@ -54,6 +71,8 @@ function CreateModal({
   const [form, setForm] = useState({
     patient_id: "", invoice_number: genNum(),
     total_amount: "", issue_date: todayISO(), due_date: "",
+    currency: "XOF" as Currency,
+    payment_type: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +90,8 @@ function CreateModal({
         total_amount: parseFloat(form.total_amount),
         issue_date: form.issue_date,
         due_date: form.due_date,
+        currency: form.currency,
+        payment_type: form.payment_type || null,
       });
       toast.success("Facture créée avec succès !");
       onCreate();
@@ -80,11 +101,13 @@ function CreateModal({
     } finally { setSaving(false); }
   };
 
+  const currSymbol = CURRENCY_CONFIG[form.currency]?.symbol ?? "FCFA";
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-2xl border border-white/[0.08] shadow-2xl" style={{ background: "#0c1828" }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="w-full max-w-md rounded-2xl border border-white/[0.08] shadow-2xl my-4" style={{ background: "#0c1828" }}>
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
             <h2 className="font-bold text-white flex items-center gap-2">
               <Receipt className="w-4 h-4 text-amber-400" />Nouvelle Facture
@@ -94,6 +117,7 @@ function CreateModal({
             </button>
           </div>
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+            {/* Patient */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Patient *</label>
               <select
@@ -110,6 +134,8 @@ function CreateModal({
                 ))}
               </select>
             </div>
+
+            {/* N° Facture */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">N° Facture *</label>
               <input
@@ -119,16 +145,62 @@ function CreateModal({
                 required
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Montant total (€) *</label>
-              <input
-                type="number" step="0.01" min="0" value={form.total_amount}
-                onChange={e => setForm({ ...form, total_amount: e.target.value })}
-                placeholder="0.00"
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-white/[0.03] text-white focus:border-amber-500/50 focus:outline-none"
-                required
-              />
+
+            {/* Devise + Montant */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">Devise *</label>
+                <div className="flex gap-1">
+                  {(["XOF", "EUR", "USD"] as Currency[]).map(c => (
+                    <button
+                      key={c} type="button"
+                      onClick={() => setForm({ ...form, currency: c })}
+                      className={`flex-1 py-2 text-xs font-bold border-2 transition-all ${
+                        form.currency === c
+                          ? "bg-amber-500 text-white border-amber-500"
+                          : "bg-transparent text-slate-400 border-slate-600 hover:border-amber-500/50 hover:text-amber-300"
+                      }`}
+                    >
+                      {CURRENCY_CONFIG[c].flag} {c === "XOF" ? "FCFA" : c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                  Montant total ({currSymbol}) *
+                </label>
+                <input
+                  type="number" step="0.01" min="0" value={form.total_amount}
+                  onChange={e => setForm({ ...form, total_amount: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-white/[0.03] text-white focus:border-amber-500/50 focus:outline-none"
+                  required
+                />
+              </div>
             </div>
+
+            {/* Mode de paiement */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mode de paiement</label>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_TYPES.map(pt => (
+                  <button
+                    key={pt.value} type="button"
+                    onClick={() => setForm({ ...form, payment_type: form.payment_type === pt.value ? "" : pt.value })}
+                    className={`px-3 py-2 text-xs font-semibold border-2 text-left transition-all ${
+                      form.payment_type === pt.value
+                        ? "bg-amber-500/15 text-amber-300 border-amber-500/60"
+                        : "bg-transparent text-slate-400 border-slate-600/60 hover:border-amber-500/40 hover:text-slate-300"
+                    }`}
+                  >
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Dates */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Date d'émission *</label>
@@ -149,6 +221,7 @@ function CreateModal({
                 />
               </div>
             </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={onClose}
                 className="flex-1 h-10 text-sm font-semibold border-2 border-slate-600 text-slate-400 bg-transparent hover:border-slate-400 hover:text-white transition-all">
@@ -173,6 +246,8 @@ function EditStatusModal({
 }: { invoice: Invoice; onClose: () => void; onSave: () => void }) {
   const [status, setStatus] = useState<InvoiceStatus>(invoice.status as InvoiceStatus);
   const [paidAmount, setPaidAmount] = useState(String(invoice.paid_amount));
+  const [currency, setCurrency] = useState<Currency>((invoice.currency as Currency) || "XOF");
+  const [paymentType, setPaymentType] = useState(invoice.payment_type || "");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -182,6 +257,8 @@ function EditStatusModal({
       await invoiceService.updateInvoice(invoice.id, {
         status,
         paid_amount: parseFloat(paidAmount),
+        currency,
+        payment_type: paymentType || null,
         ...(status === "PAYEE" ? { paid_date: todayISO() } : {}),
       });
       toast.success("Facture mise à jour !");
@@ -192,20 +269,23 @@ function EditStatusModal({
     } finally { setSaving(false); }
   };
 
+  const currSymbol = CURRENCY_CONFIG[currency]?.symbol ?? "FCFA";
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] shadow-2xl" style={{ background: "#0c1828" }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="w-full max-w-sm rounded-2xl border border-white/[0.08] shadow-2xl my-4" style={{ background: "#0c1828" }}>
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07]">
             <h2 className="font-bold text-white flex items-center gap-2">
-              <Edit2 className="w-4 h-4 text-amber-400" />Modifier Facture #{invoice.invoice_number}
+              <Edit2 className="w-4 h-4 text-amber-400" />Modifier #{invoice.invoice_number}
             </h2>
             <button onClick={onClose} className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/[0.06] transition-all">
               <X className="w-4 h-4" />
             </button>
           </div>
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+            {/* Statut */}
             <div>
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Statut</label>
               <select
@@ -218,14 +298,59 @@ function EditStatusModal({
                 ))}
               </select>
             </div>
+
+            {/* Devise */}
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Montant payé (€)</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Devise</label>
+              <div className="flex gap-2">
+                {(["XOF", "EUR", "USD"] as Currency[]).map(c => (
+                  <button
+                    key={c} type="button"
+                    onClick={() => setCurrency(c)}
+                    className={`flex-1 py-2 text-xs font-bold border-2 transition-all ${
+                      currency === c
+                        ? "bg-amber-500 text-white border-amber-500"
+                        : "bg-transparent text-slate-400 border-slate-600 hover:border-amber-500/50 hover:text-amber-300"
+                    }`}
+                  >
+                    {CURRENCY_CONFIG[c].flag} {c === "XOF" ? "FCFA" : c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Montant payé */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                Montant payé ({currSymbol})
+              </label>
               <input
                 type="number" step="0.01" min="0" value={paidAmount}
                 onChange={e => setPaidAmount(e.target.value)}
                 className="w-full px-3 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-white/[0.03] text-white focus:border-amber-500/50 focus:outline-none"
               />
             </div>
+
+            {/* Mode de paiement */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Mode de paiement</label>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_TYPES.map(pt => (
+                  <button
+                    key={pt.value} type="button"
+                    onClick={() => setPaymentType(paymentType === pt.value ? "" : pt.value)}
+                    className={`px-3 py-2 text-xs font-semibold border-2 text-left transition-all ${
+                      paymentType === pt.value
+                        ? "bg-amber-500/15 text-amber-300 border-amber-500/60"
+                        : "bg-transparent text-slate-400 border-slate-600/60 hover:border-amber-500/40 hover:text-slate-300"
+                    }`}
+                  >
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={onClose}
                 className="flex-1 h-10 text-sm font-semibold border-2 border-slate-600 text-slate-400 bg-transparent hover:border-slate-400 hover:text-white transition-all">
@@ -429,19 +554,25 @@ export default function InvoicesPage() {
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-400">
                             <DollarSign className="w-3 h-3 shrink-0" />
-                            <span className="text-white font-semibold">{fmtAmount(inv.total_amount)}</span>
+                            <span className="text-white font-semibold">{fmtAmount(inv.total_amount, inv.currency)}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 border border-white/[0.08] text-slate-500 ml-1">
+                              {CURRENCY_CONFIG[(inv.currency as Currency) ?? "XOF"]?.flag} {inv.currency || "XOF"}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-400">
                             <Calendar className="w-3 h-3 shrink-0" />Émise : {fmt(inv.issue_date)}
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-400">
-                            <Clock className="w-3 h-3 shrink-0" />Échéance : {fmt(inv.due_date)}
+                            {inv.payment_type
+                              ? <span className="text-amber-400/80">{PAYMENT_TYPES.find(p => p.value === inv.payment_type)?.label ?? inv.payment_type}</span>
+                              : <><Clock className="w-3 h-3 shrink-0" />Éch : {fmt(inv.due_date)}</>
+                            }
                           </div>
                         </div>
                         {/* Barre de progression */}
                         <div className="mt-3">
                           <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                            <span>Payé : {fmtAmount(inv.paid_amount)}</span>
+                            <span>Payé : {fmtAmount(inv.paid_amount, inv.currency)}</span>
                             <span>{pct.toFixed(0)}%</span>
                           </div>
                           <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">

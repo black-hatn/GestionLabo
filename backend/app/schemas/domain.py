@@ -212,12 +212,16 @@ class InvoiceCreate(BaseModel):
     total_amount: Decimal
     issue_date: date
     due_date: date
+    currency: str = "XOF"
+    payment_type: str | None = None
 
 
 class InvoiceUpdate(BaseModel):
     status: InvoiceStatus | None = None
     paid_amount: Decimal | None = None
     paid_date: date | None = None
+    currency: str | None = None
+    payment_type: str | None = None
 
 
 class InvoiceRead(ORMModel):
@@ -227,6 +231,8 @@ class InvoiceRead(ORMModel):
     total_amount: Decimal
     paid_amount: Decimal
     status: InvoiceStatus
+    currency: str = "XOF"
+    payment_type: str | None = None
     issue_date: date
     due_date: date
     paid_date: date | None
