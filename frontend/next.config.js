@@ -3,6 +3,7 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: ["@react-pdf/renderer"],
   experimental: {
     instrumentationHook: true,
   },
