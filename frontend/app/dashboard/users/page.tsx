@@ -365,16 +365,16 @@ export default function UsersPage() {
           { label: "Actifs", value: stats.active, sub: "Comptes actifs", color: "green" },
           { label: "Admins", value: stats.admins, sub: "Administrateurs", color: "blue" },
         ].map(({ label, value, sub, color }) => (
-          <Card key={label} className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 ${color !== "indigo" ? `bg-gradient-to-br from-${color}-50 to-${color}-100/50` : ""}`}>
+          <Card key={label} className="relative overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-0 dark:bg-[var(--color-surface-2)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className={`text-sm font-semibold text-${color}-700`}>{label}</CardTitle>
-              <div className={`p-2.5 rounded-xl bg-${color}-100`}>
-                <ShieldCheck className={`w-5 h-5 text-${color}-600`} />
+              <CardTitle className="text-sm font-semibold text-slate-700 dark:text-slate-300">{label}</CardTitle>
+              <div className="p-2.5 rounded-xl bg-indigo-100 dark:bg-indigo-500/10">
+                <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold text-${color}-700`}>{loading ? "…" : value}</div>
-              <p className={`text-xs text-${color}-500 mt-2`}>{sub}</p>
+              <div className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{loading ? "…" : value}</div>
+              <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{sub}</p>
             </CardContent>
           </Card>
         ))}
@@ -385,7 +385,7 @@ export default function UsersPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">Recherche et Filtres</CardTitle>
+              <CardTitle className="text-2xl dark:text-slate-100">Recherche et Filtres</CardTitle>
               <CardDescription>Trouvez les utilisateurs que vous recherchez</CardDescription>
             </div>
             <div className="flex gap-2">
@@ -436,10 +436,10 @@ export default function UsersPage() {
           <p className="text-neutral-500 text-sm">Chargement des utilisateurs...</p>
         </div>
       ) : users.length === 0 ? (
-        <div className="text-center p-16 bg-neutral-50 rounded-2xl border-2 border-dashed border-neutral-200">
-          <ShieldCheck className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-          <p className="font-semibold text-neutral-600 mb-2">Aucun utilisateur trouvé</p>
-          <p className="text-sm text-neutral-400">
+        <div className="text-center p-16 rounded-2xl border-2 border-dashed bg-neutral-50 dark:bg-white/[0.02] border-neutral-200 dark:border-white/[0.08]">
+          <ShieldCheck className="w-12 h-12 text-neutral-300 dark:text-slate-600 mx-auto mb-4" />
+          <p className="font-semibold text-neutral-600 dark:text-slate-400 mb-2">Aucun utilisateur trouvé</p>
+          <p className="text-sm text-neutral-400 dark:text-slate-500">
             {search ? `Aucun résultat pour "${search}"` : "Créez le premier utilisateur."}
           </p>
         </div>
@@ -456,7 +456,7 @@ export default function UsersPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <h3 className="font-bold text-lg text-neutral-900">
+                        <h3 className="font-bold text-lg text-neutral-900 dark:text-slate-100">
                           {user.first_name} {user.last_name}
                         </h3>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${ROLE_COLORS[user.role] ?? ROLE_COLORS["USER"]}`}>
@@ -468,16 +468,16 @@ export default function UsersPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-sm">
                         <div>
-                          <span className="text-xs text-neutral-400 block">Email</span>
-                          <span className="font-medium text-neutral-700 truncate block">{user.email}</span>
+                          <span className="text-xs text-neutral-400 dark:text-slate-500 block">Email</span>
+                          <span className="font-medium text-neutral-700 dark:text-slate-300 truncate block">{user.email}</span>
                         </div>
                         <div>
-                          <span className="text-xs text-neutral-400 block">Rôle système</span>
-                          <span className="font-medium text-neutral-700">{user.role}</span>
+                          <span className="text-xs text-neutral-400 dark:text-slate-500 block">Rôle système</span>
+                          <span className="font-medium text-neutral-700 dark:text-slate-300">{user.role}</span>
                         </div>
                         <div>
-                          <span className="text-xs text-neutral-400 block">Créé le</span>
-                          <span className="font-medium text-neutral-700">
+                          <span className="text-xs text-neutral-400 dark:text-slate-500 block">Créé le</span>
+                          <span className="font-medium text-neutral-700 dark:text-slate-300">
                             {new Date(user.created_at).toLocaleDateString("fr-FR")}
                           </span>
                         </div>
@@ -489,14 +489,14 @@ export default function UsersPage() {
                   <div className="flex gap-1 flex-shrink-0">
                     <button
                       onClick={() => { setSelectedUser(user); setModalMode("view"); }}
-                      className="p-2 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-neutral-400 transition-colors"
+                      className="p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-400 text-neutral-400 transition-colors"
                       title="Voir"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => { setSelectedUser(user); setModalMode("edit"); }}
-                      className="p-2 rounded-lg hover:bg-indigo-50 hover:text-indigo-700 text-neutral-400 transition-colors"
+                      className="p-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-400 text-neutral-400 transition-colors"
                       title="Modifier"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -504,7 +504,7 @@ export default function UsersPage() {
                     <button
                       onClick={() => handleToggle(user)}
                       disabled={togglingId === user.id}
-                      className={`p-2 rounded-lg transition-colors text-neutral-400 ${user.is_active ? "hover:bg-amber-50 hover:text-amber-700" : "hover:bg-emerald-50 hover:text-emerald-700"}`}
+                      className={`p-2 rounded-lg transition-colors text-neutral-400 ${user.is_active ? "hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-400" : "hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400"}`}
                       title={user.is_active ? "Désactiver" : "Activer"}
                     >
                       {togglingId === user.id
@@ -516,7 +516,7 @@ export default function UsersPage() {
                     </button>
                     <button
                       onClick={() => setDeleteUser(user)}
-                      className="p-2 rounded-lg hover:bg-red-50 hover:text-red-700 text-neutral-400 transition-colors"
+                      className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-400 text-neutral-400 transition-colors"
                       title="Supprimer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -531,7 +531,7 @@ export default function UsersPage() {
 
       {/* Total */}
       {!loading && users.length > 0 && (
-        <p className="text-xs text-neutral-400 text-center">
+        <p className="text-xs text-neutral-400 dark:text-slate-600 text-center">
           {users.length} utilisateur{users.length > 1 ? "s" : ""} affiché{users.length > 1 ? "s" : ""}
           {total > users.length ? ` sur ${total}` : ""}
         </p>
