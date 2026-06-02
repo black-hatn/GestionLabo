@@ -10,9 +10,26 @@ const apiClient = axios.create({
   },
 });
 
+// Lit le token depuis zustand (source de vérité) OU localStorage fallback
+function getAuthToken(): string | null {
+  try {
+    // Zustand persist stocke sous "novabio-auth" dans localStorage
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('novabio-auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const token = parsed?.state?.accessToken;
+        if (token) return token;
+      }
+    }
+  } catch { /* ignore */ }
+  // Fallback: AuthService legacy key
+  return AuthService.getToken();
+}
+
 // Request interceptor - add token to every request
 apiClient.interceptors.request.use((config) => {
-  const token = AuthService.getToken();
+  const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
