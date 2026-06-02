@@ -4,8 +4,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens — Dark (default) ─────────────── */
-:root {
+/* ─── Design Tokens — Dark (default + .dark class) ──────────────── */
+:root,
+.dark {
   --color-bg:           #050c1a;
   --color-surface:      #0c1828;
   --color-surface-2:    #111f33;
@@ -59,6 +60,9 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color-scheme: dark;
+  }
+  html.dark {
     color-scheme: dark;
   }
   html.light {

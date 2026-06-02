@@ -73,9 +73,9 @@ export function Navbar() {
   return (
     <header
       className="sticky top-0 z-40 w-full h-[60px] flex items-center justify-between px-6 border-b
-        dark:border-white/[0.05] dark:[background:rgba(10,21,37,0.9)]
-        light:border-black/[0.06] light:[background:rgba(255,255,255,0.92)]
-        border-[var(--color-border)]"
+        border-[var(--color-border)]
+        dark:[background:rgba(10,21,37,0.9)]
+        light:[background:rgba(255,255,255,0.92)]"
       style={{ backdropFilter: "blur(20px)" }}
     >
       {/* Left: Brand */}
@@ -84,7 +84,7 @@ export function Navbar() {
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-emerald group-hover:scale-105 transition-transform">
             <Activity className="w-4 h-4 text-white" />
           </div>
-          <span className="font-extrabold text-[15px] text-white font-display hidden sm:block">
+          <span className="font-extrabold text-[15px] text-white light:text-slate-900 font-display hidden sm:block">
             Nova<span className="text-emerald-400">Bio</span>
           </span>
         </Link>
@@ -216,7 +216,7 @@ export function Navbar() {
         {/* User info */}
         <div className="flex items-center gap-2.5 pl-3 border-l border-white/[0.06] ml-1">
           <div className="hidden lg:flex flex-col items-end">
-            <span className="text-sm font-bold text-white leading-none">
+            <span className="text-sm font-bold text-white light:text-slate-900 leading-none">
               {user?.first_name || user?.last_name
                 ? `${user.first_name ?? ""} ${user.last_name ?? ""}`.trim()
                 : "Utilisateur"}

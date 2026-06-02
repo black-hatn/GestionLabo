@@ -233,6 +233,9 @@ module.exports = {
     },
   },
   plugins: [
-    // Plugins can be added here
+    // 'light:' variant — mirrors 'dark:' but activates under .light class on <html>
+    function({ addVariant }) {
+      addVariant('light', '.light &');
+    },
   ],
 };

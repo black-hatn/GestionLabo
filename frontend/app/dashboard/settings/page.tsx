@@ -102,10 +102,13 @@ export default function SettingsPage() {
         first_name: profile.first_name,
         last_name: profile.last_name,
       });
-      // Refresh stored user data
-      const token = localStorage.getItem("access_token") ?? "";
-      const refreshToken = localStorage.getItem("refresh_token") ?? "";
-      login(token, { ...updated, role: (updated.role as UserRole) });
+      // Refresh stored user data — read token from Zustand persist store
+      let accessToken = "";
+      try {
+        const raw = localStorage.getItem("novabio-auth");
+        if (raw) accessToken = JSON.parse(raw)?.state?.accessToken ?? "";
+      } catch { /* ignore */ }
+      login(accessToken, { ...updated, role: (updated.role as UserRole) });
       toast.success("Profil mis à jour avec succès !");
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.message || "Erreur lors de la mise à jour";
@@ -150,8 +153,8 @@ export default function SettingsPage() {
     toast.success("Préférences de notification enregistrées");
   };
 
-  const roleConfig = roleLabels[profile.role] ?? roleLabels.USER;
-  const userInitials = `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase();
+  const roleConfig = roleLabels[profile.role] ?? { label: profile.role || "Utilisateur", color: "bg-slate-100 text-slate-700 border-slate-200" };
+  const userInitials = `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase() || "?";
 
   const tabs = [
     { id: "profile", label: "Profil", icon: User },

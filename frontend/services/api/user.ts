@@ -59,13 +59,17 @@ const userService = {
   },
 
   async updateMyProfile(payload: { first_name?: string; last_name?: string }): Promise<UserData> {
-    // Uses the auth/me approach — update via users endpoint (admin) or a dedicated profile endpoint
-    const token = localStorage.getItem('access_token');
-    if (!token) throw new Error('Not authenticated');
-    const userJson = localStorage.getItem('user');
-    const user = userJson ? JSON.parse(userJson) : null;
-    if (!user?.id) throw new Error('No user ID found');
-    return this.updateUser(user.id, payload);
+    // Read user ID from Zustand persist store (novabio-auth)
+    let userId: string | null = null;
+    try {
+      const raw = localStorage.getItem('novabio-auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        userId = parsed?.state?.user?.id ?? null;
+      }
+    } catch { /* ignore */ }
+    if (!userId) throw new Error('Non authentifié');
+    return this.updateUser(userId, payload);
   },
 
   async changePassword(current_password: string, new_password: string): Promise<void> {

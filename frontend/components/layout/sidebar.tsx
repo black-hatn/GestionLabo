@@ -81,8 +81,8 @@ export function Sidebar() {
               ? "bg-red-500/15 text-red-300 border border-red-500/30"
               : "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
             : danger
-              ? "text-slate-400 border border-transparent hover:bg-red-500/8 hover:text-red-400 hover:border-red-500/20"
-              : "text-slate-400 border border-transparent hover:bg-white/[0.04] hover:text-white hover:border-white/[0.06]"
+              ? "text-slate-400 light:text-slate-600 border border-transparent hover:bg-red-500/8 hover:text-red-400 hover:border-red-500/20"
+              : "text-slate-400 light:text-slate-600 border border-transparent hover:bg-white/[0.04] light:hover:bg-black/[0.04] hover:text-white light:hover:text-slate-900 hover:border-white/[0.06] light:hover:border-black/[0.06]"
         )}
       >
         <Icon className="w-4 h-4 shrink-0" />
@@ -123,10 +123,10 @@ export function Sidebar() {
         </div>
         {!collapsed && (
           <div className="flex flex-col leading-none">
-            <span className="font-extrabold text-[15px] text-white font-display">
+            <span className="font-extrabold text-[15px] text-white light:text-slate-900 font-display">
               Nova<span className="text-emerald-400">Bio</span>
             </span>
-            <span className="text-[9px] text-slate-600 tracking-[0.16em] uppercase font-semibold">Lab Platform</span>
+            <span className="text-[9px] text-slate-600 light:text-slate-400 tracking-[0.16em] uppercase font-semibold">Lab Platform</span>
           </div>
         )}
       </div>
@@ -134,7 +134,7 @@ export function Sidebar() {
       {/* Main nav */}
       <nav className="flex-1 px-3 py-5 flex flex-col gap-1 overflow-y-auto overflow-x-hidden">
         {!collapsed && (
-          <span className="text-[9px] font-bold text-slate-600 uppercase tracking-[0.15em] px-3 mb-2">
+          <span className="text-[9px] font-bold text-slate-600 light:text-slate-400 uppercase tracking-[0.15em] px-3 mb-2">
             Navigation
           </span>
         )}
@@ -165,7 +165,7 @@ export function Sidebar() {
           title={collapsed ? "Déconnexion" : undefined}
           className={cn(
             "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 select-none w-full mt-1",
-            "text-slate-400 border border-transparent hover:bg-red-500/[0.08] hover:text-red-400 hover:border-red-500/20"
+            "text-slate-400 light:text-slate-600 border border-transparent hover:bg-red-500/[0.08] hover:text-red-400 hover:border-red-500/20"
           )}
         >
           <LogOut className="w-4 h-4 shrink-0" />
@@ -187,8 +187,8 @@ export function Sidebar() {
           >
             <Zap className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
             <div>
-              <span className="text-[11px] font-bold text-slate-300 block">Mode IA Activé</span>
-              <span className="text-[10px] text-slate-600">NovaBio v2.0 · Médical</span>
+              <span className="text-[11px] font-bold text-slate-300 light:text-slate-700 block">Mode IA Activé</span>
+              <span className="text-[10px] text-slate-600 light:text-slate-400">NovaBio v2.0 · Médical</span>
             </div>
           </div>
         )}
