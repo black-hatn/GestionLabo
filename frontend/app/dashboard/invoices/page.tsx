@@ -435,7 +435,8 @@ function EditStatusModal({
 /* ── Page principale ── */
 export default function InvoicesPage() {
   const user = useAuthStore(s => s.user);
-  const canWrite = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
+  const canWrite  = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
+  const canDelete = user?.role === "ADMIN";
 
   const [invoices, setInvoices]       = useState<Invoice[]>([]);
   const [patients, setPatients]       = useState<Patient[]>([]);
@@ -654,22 +655,22 @@ export default function InvoicesPage() {
                           patient={patients.find(p => p.id === inv.patient_id)}
                         />
                         {canWrite && (
-                          <>
-                            <button
-                              onClick={() => setModal({ type: "edit", inv })}
-                              className="p-2 border-2 border-amber-500/30 text-amber-400 bg-transparent hover:bg-amber-500/10 hover:border-amber-500 transition-all"
-                              title="Modifier"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(inv)}
-                              className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all"
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
+                          <button
+                            onClick={() => setModal({ type: "edit", inv })}
+                            className="p-2 border-2 border-amber-500/30 text-amber-400 bg-transparent hover:bg-amber-500/10 hover:border-amber-500 transition-all"
+                            title="Modifier"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(inv)}
+                            className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </div>

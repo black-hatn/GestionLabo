@@ -400,11 +400,13 @@ export default function PaymentsPage() {
                         )}
                       </div>
                     </div>
-                    <button onClick={() => handleDelete(p)}
-                      className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all shrink-0"
-                      title="Supprimer">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {user?.role === "ADMIN" && (
+                      <button onClick={() => handleDelete(p)}
+                        className="p-2 border-2 border-red-500/30 text-red-400 bg-transparent hover:bg-red-500/10 hover:border-red-500 transition-all shrink-0"
+                        title="Supprimer">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

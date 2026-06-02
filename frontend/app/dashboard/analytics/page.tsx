@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, Download, BarChart3, LineChart as LineChartIcon, Loader2 } from "lucide-react";
 import { getAnalyticsSummary, type AnalyticsSummary } from "@/services/api/analytics";
 import apiClient from "@/services/api/client";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
@@ -92,6 +94,8 @@ export default function AnalyticsPage() {
   ];
 
   return (
+    <ProtectedRoute>
+      <RoleGuard allowedRoles={["ADMIN", "LAB_TECH", "DOCTOR"]}>
     <div className="space-y-8 animate-fade-in">
       {/* Professional Header Section */}
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg animate-slide-up">
@@ -258,5 +262,7 @@ export default function AnalyticsPage() {
         </Button>
       </div>
     </div>
+      </RoleGuard>
+    </ProtectedRoute>
   );
 }

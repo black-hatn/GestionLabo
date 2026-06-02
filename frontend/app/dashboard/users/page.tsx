@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import userService, { UserData, UserCreatePayload } from "@/services/api/user";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type ModalMode = "create" | "edit" | "view" | null;
@@ -344,6 +346,8 @@ export default function UsersPage() {
   };
 
   return (
+    <ProtectedRoute>
+      <RoleGuard allowedRoles={["ADMIN"]}>
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg animate-slide-up">
@@ -555,5 +559,7 @@ export default function UsersPage() {
         />
       )}
     </div>
+      </RoleGuard>
+    </ProtectedRoute>
   );
 }

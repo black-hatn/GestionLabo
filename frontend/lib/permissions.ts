@@ -44,9 +44,9 @@ const ADMIN_PERMISSIONS: RolePermissions = {
 };
 
 const DOCTOR_PERMISSIONS: RolePermissions = {
-  patients: FULL_ACCESS,
-  exams: { read: true, create: true, update: true, delete: false },
-  results: { read: true, create: true, update: true, delete: false },
+  patients: { read: true, create: false, update: false, delete: false },
+  exams: { read: true, create: false, update: false, delete: false },
+  results: { read: true, create: false, update: false, delete: false },
   invoices: { read: true, create: false, update: false, delete: false },
   payments: { read: true, create: false, update: false, delete: false },
   users: { read: false, create: false, update: false, delete: false },
