@@ -15,11 +15,11 @@ import { UserRole } from "@/lib/permissions";
 import userService from "@/services/api/user";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  ADMIN:        { label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200"         },
-  RECEPTIONIST: { label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-  COLLECTOR:    { label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200"   },
-  LAB_TECH:     { label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200" },
-  DOCTOR:       { label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200"      },
+  ADMIN:        { label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"             },
+  RECEPTIONIST: { label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20" },
+  COLLECTOR:    { label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"      },
+  LAB_TECH:     { label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20" },
+  DOCTOR:       { label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"            },
 };
 
 export default function SettingsPage() {
@@ -153,7 +153,7 @@ export default function SettingsPage() {
     toast.success("Préférences de notification enregistrées");
   };
 
-  const roleConfig = roleLabels[profile.role] ?? { label: profile.role || "Utilisateur", color: "bg-slate-100 text-slate-700 border-slate-200" };
+  const roleConfig = roleLabels[profile.role] ?? { label: profile.role || "Utilisateur", color: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-white/[0.05] dark:text-slate-300 dark:border-white/[0.08]" };
   const userInitials = `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase() || "?";
 
   const tabs = [
@@ -177,7 +177,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-neutral-200 bg-white rounded-t-lg shadow-sm">
+      <div className="border-b border-neutral-200 bg-white rounded-t-lg shadow-sm dark:border-white/[0.08] dark:bg-[var(--color-surface)]">
         <div className="flex gap-1 px-6">
           {tabs.map(({ id, label, icon: Icon }) => {
             const isActive = activeTab === id;
@@ -186,7 +186,7 @@ export default function SettingsPage() {
                 key={id}
                 onClick={() => setActiveTab(id as any)}
                 className={`flex items-center gap-2 px-4 py-4 border-b-2 font-medium text-sm transition-all whitespace-nowrap ${
-                  isActive ? "border-primary-600 text-primary-600" : "border-transparent text-neutral-500 hover:text-neutral-900"
+                  isActive ? "border-primary-600 text-primary-600" : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-slate-400 dark:hover:text-white"
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -207,7 +207,7 @@ export default function SettingsPage() {
           <CardContent>
             <form onSubmit={handleSaveProfile} className="space-y-6">
               {/* Avatar Section */}
-              <div className="flex items-center gap-6 pb-6 border-b border-neutral-100">
+              <div className="flex items-center gap-6 pb-6 border-b border-neutral-100 dark:border-white/[0.06]">
                 <div className="relative group">
                   {avatarPreview ? (
                     <img
@@ -230,10 +230,10 @@ export default function SettingsPage() {
                   <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
                 </div>
                 <div>
-                  <p className="font-bold text-neutral-900 text-lg">
+                  <p className="font-bold text-neutral-900 dark:text-white text-lg">
                     {profile.first_name} {profile.last_name}
                   </p>
-                  <p className="text-neutral-500 text-sm">{profile.email}</p>
+                  <p className="text-neutral-500 dark:text-slate-400 text-sm">{profile.email}</p>
                   <button
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
@@ -246,7 +246,7 @@ export default function SettingsPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Prénom</label>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Prénom</label>
                   <Input
                     value={profile.first_name}
                     onChange={e => setProfile({ ...profile, first_name: e.target.value })}
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Nom</label>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Nom</label>
                   <Input
                     value={profile.last_name}
                     onChange={e => setProfile({ ...profile, last_name: e.target.value })}
@@ -264,18 +264,18 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Email</label>
-                <Input type="email" value={profile.email} disabled className="bg-neutral-50 text-neutral-500" />
-                <p className="text-xs text-neutral-400 mt-1">L&apos;email ne peut pas être modifié ici</p>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Email</label>
+                <Input type="email" value={profile.email} disabled className="bg-neutral-50 text-neutral-500 dark:bg-white/[0.03] dark:text-slate-500" />
+                <p className="text-xs text-neutral-400 dark:text-slate-500 mt-1">L&apos;email ne peut pas être modifié ici</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-neutral-700 mb-2">Rôle</label>
+                <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Rôle</label>
                 <div className="flex items-center gap-3">
                   <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${roleConfig.color}`}>
                     {roleConfig.label}
                   </span>
-                  <p className="text-xs text-neutral-400">Contactez un administrateur pour changer votre rôle</p>
+                  <p className="text-xs text-neutral-400 dark:text-slate-500">Contactez un administrateur pour changer votre rôle</p>
                 </div>
               </div>
 
@@ -291,9 +291,9 @@ export default function SettingsPage() {
       {/* SECURITY TAB */}
       {activeTab === "security" && (
         <div className="space-y-6">
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
-            <AlertDescription className="text-green-800">
+          <Alert className="border-green-200 bg-green-50 dark:border-green-500/20 dark:bg-green-500/10">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+            <AlertDescription className="text-green-800 dark:text-green-400">
               <strong>Connexion sécurisée</strong> — Votre session est chiffrée et protégée par JWT.
             </AlertDescription>
           </Alert>
@@ -306,7 +306,7 @@ export default function SettingsPage() {
             <CardContent>
               <form onSubmit={handleSavePassword} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Mot de passe actuel</label>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Mot de passe actuel</label>
                   <div className="relative">
                     <Input
                       type={showCurrentPw ? "text" : "password"}
@@ -315,13 +315,13 @@ export default function SettingsPage() {
                       placeholder="••••••••"
                       className="pr-10"
                     />
-                    <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-slate-500">
                       {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Nouveau mot de passe</label>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Nouveau mot de passe</label>
                   <div className="relative">
                     <Input
                       type={showNewPw ? "text" : "password"}
@@ -330,7 +330,7 @@ export default function SettingsPage() {
                       placeholder="••••••••"
                       className="pr-10"
                     />
-                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-slate-500">
                       {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
@@ -339,7 +339,7 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Confirmer le nouveau mot de passe</label>
+                  <label className="block text-sm font-medium text-neutral-700 dark:text-slate-300 mb-2">Confirmer le nouveau mot de passe</label>
                   <Input
                     type="password"
                     value={security.confirmPassword}
@@ -377,16 +377,16 @@ export default function SettingsPage() {
                   { key: "emailOnNewInvoice", label: "Nouvelle facture créée", desc: "Email à chaque émission de facture" },
                   { key: "emailOnPayment", label: "Paiement reçu", desc: "Confirmation lors d'un règlement effectué" },
                 ].map(({ key, label, desc }) => (
-                  <label key={key} className="flex items-start gap-4 p-4 border border-neutral-200 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors group">
+                  <label key={key} className="flex items-start gap-4 p-4 border border-neutral-200 rounded-xl hover:bg-neutral-50 cursor-pointer transition-colors group dark:border-white/[0.08] dark:hover:bg-white/[0.03]">
                     <input
                       type="checkbox"
                       checked={notifications[key as keyof typeof notifications]}
                       onChange={e => setNotifications({ ...notifications, [key]: e.target.checked })}
-                      className="w-4 h-4 rounded border-neutral-300 text-primary-600 mt-0.5 flex-shrink-0"
+                      className="w-4 h-4 rounded border-neutral-300 dark:border-white/[0.08] text-primary-600 mt-0.5 flex-shrink-0"
                     />
                     <div>
-                      <p className="text-neutral-900 font-semibold text-sm">{label}</p>
-                      <p className="text-neutral-400 text-xs mt-0.5">{desc}</p>
+                      <p className="text-neutral-900 dark:text-white font-semibold text-sm">{label}</p>
+                      <p className="text-neutral-400 dark:text-slate-500 text-xs mt-0.5">{desc}</p>
                     </div>
                   </label>
                 ))}

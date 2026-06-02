@@ -13,23 +13,23 @@ import { useAuthStore } from "@/lib/auth-store";
 import userService, { UserData } from "@/services/api/user";
 
 const roles = [
-  { value: "ADMIN",        label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200"       },
-  { value: "RECEPTIONIST", label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200" },
-  { value: "COLLECTOR",    label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200"  },
-  { value: "LAB_TECH",     label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200" },
-  { value: "DOCTOR",       label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200"    },
+  { value: "ADMIN",        label: "Administrateur",  color: "bg-red-100 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20"             },
+  { value: "RECEPTIONIST", label: "Réceptionniste",  color: "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20" },
+  { value: "COLLECTOR",    label: "Préleveur",        color: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20"      },
+  { value: "LAB_TECH",     label: "Technicien Labo",  color: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20" },
+  { value: "DOCTOR",       label: "Médecin",          color: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20"            },
 ];
 
 const ROLE_AVATAR: Record<string, string> = {
-  ADMIN:        "bg-red-100 text-red-700",
-  RECEPTIONIST: "bg-indigo-100 text-indigo-700",
-  COLLECTOR:    "bg-amber-100 text-amber-700",
-  LAB_TECH:     "bg-purple-100 text-purple-700",
-  DOCTOR:       "bg-blue-100 text-blue-700",
+  ADMIN:        "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400",
+  RECEPTIONIST: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
+  COLLECTOR:    "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+  LAB_TECH:     "bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
+  DOCTOR:       "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
 };
 
 const getRoleConfig = (role: string) =>
-  roles.find(r => r.value === role) ?? { value: role, label: role, color: "bg-gray-100 text-gray-700 border-gray-200" };
+  roles.find(r => r.value === role) ?? { value: role, label: role, color: "bg-gray-100 text-gray-700 border-gray-200 dark:bg-white/[0.05] dark:text-slate-300 dark:border-white/[0.08]" };
 
 const getInitials = (firstName: string, lastName: string) =>
   `${firstName?.charAt(0) ?? ""}${lastName?.charAt(0) ?? ""}`.toUpperCase();
@@ -203,16 +203,16 @@ export default function AdminControlPanel() {
 
         {/* Error */}
         {error && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          <Alert className="border-red-200 bg-red-50 dark:border-red-500/20 dark:bg-red-500/10">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <AlertDescription className="text-red-800 dark:text-red-400">{error}</AlertDescription>
           </Alert>
         )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
           {[
-            { label: "Total",           value: stats.total,         color: "text-neutral-900"  },
+            { label: "Total",           value: stats.total,         color: "text-neutral-900 dark:text-white"  },
             { label: "Admins",          value: stats.admins,        color: "text-red-700"       },
             { label: "Réceptionnistes", value: stats.receptionists, color: "text-indigo-700"    },
             { label: "Préleveurs",      value: stats.collectors,    color: "text-amber-700"     },
@@ -222,7 +222,7 @@ export default function AdminControlPanel() {
           ].map(({ label, value, color }) => (
             <Card key={label} className="border-0 shadow-md text-center p-3">
               <div className={`text-2xl font-extrabold ${color}`}>{value}</div>
-              <div className="text-[11px] text-neutral-500 mt-1 font-medium leading-tight">{label}</div>
+              <div className="text-[11px] text-neutral-500 dark:text-slate-500 mt-1 font-medium leading-tight">{label}</div>
             </Card>
           ))}
         </div>
@@ -230,7 +230,7 @@ export default function AdminControlPanel() {
         {/* Search + Actions Toolbar */}
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 dark:text-slate-500" />
             <Input
               placeholder="Rechercher par nom ou email..."
               value={search}
@@ -254,13 +254,13 @@ export default function AdminControlPanel() {
 
         {/* Create Form */}
         {showCreateForm && (
-          <Card className="border-2 border-red-200 bg-red-50 shadow-md">
+          <Card className="border-2 border-red-200 bg-red-50 shadow-md dark:border-red-500/20 dark:bg-red-500/10">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xl text-red-800">➕ Créer un Utilisateur</CardTitle>
                 <CardDescription>Tous les champs sont requis</CardDescription>
               </div>
-              <button onClick={() => setShowCreateForm(false)} className="text-neutral-400 hover:text-neutral-600">
+              <button onClick={() => setShowCreateForm(false)} className="text-neutral-400 hover:text-neutral-600 dark:text-slate-500 dark:hover:text-slate-300">
                 <X className="w-5 h-5" />
               </button>
             </CardHeader>
@@ -277,11 +277,11 @@ export default function AdminControlPanel() {
                     onChange={e => setFormData({ ...formData, password: e.target.value })}
                     className="pr-10"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-slate-500">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <select className="px-3 py-2 border border-neutral-300 rounded-md text-sm font-medium col-span-full md:col-span-1" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                <select className="px-3 py-2 border border-neutral-300 rounded-md text-sm font-medium col-span-full md:col-span-1 dark:bg-[var(--color-surface-2)] dark:border-white/[0.08] dark:text-slate-300" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
@@ -298,12 +298,12 @@ export default function AdminControlPanel() {
 
         {/* Edit Form */}
         {editingId && (
-          <Card className="border-2 border-blue-200 bg-blue-50 shadow-md">
+          <Card className="border-2 border-blue-200 bg-blue-50 shadow-md dark:border-blue-500/20 dark:bg-blue-500/10">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-xl text-blue-800">✏️ Modifier l&apos;Utilisateur</CardTitle>
               </div>
-              <button onClick={() => setEditingId(null)} className="text-neutral-400 hover:text-neutral-600">
+              <button onClick={() => setEditingId(null)} className="text-neutral-400 hover:text-neutral-600 dark:text-slate-500 dark:hover:text-slate-300">
                 <X className="w-5 h-5" />
               </button>
             </CardHeader>
@@ -311,8 +311,8 @@ export default function AdminControlPanel() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input placeholder="Prénom" value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} />
                 <Input placeholder="Nom" value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} />
-                <Input type="email" value={formData.email} disabled className="bg-neutral-100 text-neutral-500" />
-                <select className="px-3 py-2 border border-neutral-300 rounded-md text-sm font-medium" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
+                <Input type="email" value={formData.email} disabled className="bg-neutral-100 text-neutral-500 dark:bg-white/[0.05] dark:text-slate-500" />
+                <select className="px-3 py-2 border border-neutral-300 rounded-md text-sm font-medium dark:bg-[var(--color-surface-2)] dark:border-white/[0.08] dark:text-slate-300" value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}>
                   {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
@@ -342,12 +342,12 @@ export default function AdminControlPanel() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-12 gap-3 text-neutral-500">
+              <div className="flex items-center justify-center py-12 gap-3 text-neutral-500 dark:text-slate-500">
                 <Loader2 className="w-6 h-6 animate-spin" />
                 <span>Chargement des utilisateurs...</span>
               </div>
             ) : users.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-neutral-400 gap-2">
+              <div className="flex flex-col items-center justify-center py-12 text-neutral-400 dark:text-slate-500 gap-2">
                 <AlertCircle className="w-8 h-8" />
                 <p>Aucun utilisateur trouvé</p>
               </div>
@@ -365,18 +365,18 @@ export default function AdminControlPanel() {
                       className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                         isCurrentUser
                           ? "bg-primary-50 border-primary-200"
-                          : "bg-neutral-50 border-neutral-200 hover:bg-neutral-100"
+                          : "bg-neutral-50 border-neutral-200 hover:bg-neutral-100 dark:bg-white/[0.03] dark:border-white/[0.08] dark:hover:bg-white/[0.05]"
                       }`}
                     >
                       <div className="flex items-center gap-4 flex-1 min-w-0">
                         {/* Avatar */}
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${ROLE_AVATAR[user.role] ?? "bg-gray-100 text-gray-700"}`}>
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${ROLE_AVATAR[user.role] ?? "bg-gray-100 text-gray-700 dark:bg-white/[0.05] dark:text-slate-300"}`}>
                           {getInitials(user.first_name, user.last_name)}
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-neutral-900">
+                            <h3 className="font-bold text-neutral-900 dark:text-white">
                               {user.first_name} {user.last_name}
                               {isCurrentUser && <span className="text-primary-600 font-medium text-xs ml-1">(Vous)</span>}
                             </h3>
@@ -389,8 +389,8 @@ export default function AdminControlPanel() {
                               <Badge variant="danger" className="text-xs">Inactif</Badge>
                             )}
                           </div>
-                          <p className="text-sm text-neutral-500 truncate mt-0.5">{user.email}</p>
-                          <p className="text-xs text-neutral-400 mt-0.5">
+                          <p className="text-sm text-neutral-500 dark:text-slate-400 truncate mt-0.5">{user.email}</p>
+                          <p className="text-xs text-neutral-400 dark:text-slate-500 mt-0.5">
                             Créé le {new Date(user.created_at).toLocaleDateString("fr-FR")}
                           </p>
                         </div>
@@ -402,7 +402,7 @@ export default function AdminControlPanel() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-9 w-9 p-0 hover:bg-blue-100 hover:text-blue-700"
+                            className="h-9 w-9 p-0 hover:bg-blue-100 hover:text-blue-700 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
                             onClick={() => handleEdit(user)}
                             title="Modifier"
                           >
@@ -411,7 +411,7 @@ export default function AdminControlPanel() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className={`h-9 w-9 p-0 ${user.is_active ? "hover:bg-warning-100 hover:text-warning-700" : "hover:bg-green-100 hover:text-green-700"}`}
+                            className={`h-9 w-9 p-0 ${user.is_active ? "hover:bg-warning-100 hover:text-warning-700 dark:hover:bg-amber-500/10 dark:hover:text-amber-400" : "hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-500/10 dark:hover:text-green-400"}`}
                             onClick={() => handleToggleActive(user)}
                             disabled={isToggling}
                             title={user.is_active ? "Désactiver" : "Activer"}
@@ -421,7 +421,7 @@ export default function AdminControlPanel() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-9 w-9 p-0 hover:bg-red-100 hover:text-red-700"
+                            className="h-9 w-9 p-0 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-500/10 dark:hover:text-red-400"
                             onClick={() => handleDelete(user)}
                             disabled={isDeleting}
                             title="Supprimer définitivement"

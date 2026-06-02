@@ -108,7 +108,7 @@ export default function AnalyticsPage() {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-700 text-sm">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-red-700 text-sm dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400">
           {error}
         </div>
       )}
@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
             key={range}
             variant={timeRange === range ? "default" : "outline"}
             onClick={() => setTimeRange(range)}
-            className={timeRange === range ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "hover:bg-neutral-100"}
+            className={timeRange === range ? "bg-indigo-600 hover:bg-indigo-700 shadow-md" : "hover:bg-neutral-100 dark:hover:bg-white/[0.06]"}
           >
             {range === "week" ? "Semaine" : range === "month" ? "Mois" : "Année"}
           </Button>
@@ -135,15 +135,15 @@ export default function AnalyticsPage() {
             <CardContent className="pt-6 relative z-10">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold text-neutral-600 mb-2">{kpi.label}</p>
+                  <p className="text-sm font-semibold text-neutral-600 dark:text-slate-400 mb-2">{kpi.label}</p>
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
-                      <span className="text-neutral-400 text-sm">Chargement…</span>
+                      <span className="text-neutral-400 dark:text-slate-500 text-sm">Chargement…</span>
                     </div>
                   ) : (
                     <>
-                      <p className="text-3xl font-bold text-neutral-900">{kpi.value}</p>
+                      <p className="text-3xl font-bold text-neutral-900 dark:text-slate-100">{kpi.value}</p>
                       <div className="flex items-center gap-1 mt-3">
                         <TrendingUp className="w-4 h-4 text-secondary-600" />
                         <span className="text-sm font-medium text-secondary-600">{kpi.change}</span>
