@@ -2,12 +2,11 @@
 
 import Link from "next/link";
 import {
-  Activity, ArrowRight, Users, FlaskConical, Receipt,
+  Activity, ArrowRight, Users, Receipt,
   ClipboardList, ShieldCheck, CheckCircle2,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 
-/* ── 3 points clés ── */
 const highlights = [
   {
     icon: Users,
@@ -29,7 +28,6 @@ const highlights = [
   },
 ];
 
-/* ── 5 rôles résumés ── */
 const roles = [
   { label: "Administrateur",  desc: "Accès complet",              color: "red"     },
   { label: "Réceptionniste",  desc: "Patients & Facturation",     color: "indigo"  },
@@ -51,11 +49,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-bg)] transition-colors duration-300">
 
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
+      {/* Ambient glow — visible en dark seulement */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden dark:block hidden" aria-hidden>
         <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-emerald-500/[0.06] rounded-full blur-[120px]" />
         <div className="absolute bottom-0 right-0 w-[400px] h-[300px] bg-blue-600/[0.04] rounded-full blur-[100px]" />
-        <div className="absolute inset-0 dot-pattern opacity-[0.15]" />
       </div>
 
       <Navbar />
@@ -65,47 +62,33 @@ export default function HomePage() {
         {/* ════════ HERO ════════ */}
         <section className="max-w-4xl mx-auto px-6 pt-20 pb-28 text-center">
 
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 border border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-400 text-xs font-bold uppercase tracking-widest">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 border border-emerald-500/25 bg-emerald-500/[0.07] text-emerald-500 text-xs font-bold uppercase tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Plateforme de Laboratoire Médical
           </div>
 
           <h1
-            className="font-display font-extrabold text-white leading-[1.08] tracking-tight mb-6"
+            className="font-display font-extrabold text-[var(--color-text)] leading-[1.08] tracking-tight mb-6"
             style={{ fontSize: "clamp(2.2rem, 5.5vw, 4.2rem)" }}
           >
             Gérez votre laboratoire<br />
             <span className="text-emerald-400">de A à Z.</span>
           </h1>
 
-          <p className="text-slate-400 text-lg leading-relaxed max-w-xl mx-auto mb-10">
+          <p className="text-[var(--color-muted)] text-lg leading-relaxed max-w-xl mx-auto mb-10">
             Patients, examens, résultats biologiques et facturation — centralisés en un seul endroit,
             avec un accès sécurisé pour chaque membre de votre équipe.
           </p>
 
-          {/* Boutons Bootstrap */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/login">
-              <button className="
-                h-11 px-8 text-sm font-bold
-                bg-emerald-500 text-white border-2 border-emerald-500
-                hover:bg-emerald-600 hover:border-emerald-600
-                active:bg-emerald-700
-                transition-all duration-150 flex items-center gap-2 group shadow
-              ">
+              <button className="h-11 px-8 text-sm font-bold bg-emerald-500 text-white border-2 border-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 active:bg-emerald-700 transition-all duration-150 flex items-center gap-2 group shadow">
                 Accéder à la plateforme
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
             </Link>
             <Link href="/services">
-              <button className="
-                h-11 px-8 text-sm font-semibold
-                bg-transparent text-slate-300 border-2 border-slate-600
-                hover:border-slate-400 hover:text-white
-                active:bg-white/[0.04]
-                transition-all duration-150
-              ">
+              <button className="h-11 px-8 text-sm font-semibold bg-transparent text-[var(--color-muted)] border-2 border-[var(--color-border-hover)] hover:border-[var(--color-muted)] hover:text-[var(--color-text)] active:opacity-80 transition-all duration-150">
                 En savoir plus
               </button>
             </Link>
@@ -113,10 +96,13 @@ export default function HomePage() {
         </section>
 
         {/* ════════ 3 POINTS CLÉS ════════ */}
-        <section className="border-t border-white/[0.06]" style={{ background: "rgba(10,18,32,0.6)" }}>
+        <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="max-w-5xl mx-auto px-6 py-16 grid md:grid-cols-3 gap-6">
             {highlights.map(({ icon: Icon, title, desc, color }) => (
-              <div key={title} className="flex flex-col gap-4 p-6 border border-white/[0.06] rounded-sm" style={{ background: "rgba(10,21,37,0.7)" }}>
+              <div
+                key={title}
+                className="flex flex-col gap-4 p-6 border border-[var(--color-border)] rounded-sm bg-[var(--color-surface-2)]"
+              >
                 <div className={`w-10 h-10 flex items-center justify-center border ${
                   color === "blue"  ? "bg-blue-500/10 border-blue-500/20 text-blue-400"   :
                   color === "teal"  ? "bg-teal-500/10 border-teal-500/20 text-teal-400"   :
@@ -124,8 +110,8 @@ export default function HomePage() {
                 }`}>
                   <Icon className="w-5 h-5" />
                 </div>
-                <h3 className="font-bold text-white text-base">{title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+                <h3 className="font-bold text-[var(--color-text)] text-base">{title}</h3>
+                <p className="text-[var(--color-muted)] text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
@@ -135,38 +121,31 @@ export default function HomePage() {
         <section className="max-w-5xl mx-auto px-6 py-16">
           <div className="flex flex-col md:flex-row gap-12 items-start">
 
-            {/* Texte gauche */}
             <div className="md:w-1/3 shrink-0">
               <div className="flex items-center gap-2 mb-4">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Contrôle d'accès</span>
+                <span className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Contrôle d&apos;accès</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-white font-display leading-snug mb-3">
+              <h2 className="text-2xl font-extrabold text-[var(--color-text)] font-display leading-snug mb-3">
                 5 rôles,<br />des accès précis.
               </h2>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-[var(--color-muted)] text-sm leading-relaxed">
                 Chaque utilisateur voit et fait uniquement ce que son rôle lui permet.
                 Aucun accès superflu, aucune donnée exposée inutilement.
               </p>
               <Link href="/login" className="mt-6 inline-block">
-                <button className="
-                  h-9 px-5 text-sm font-semibold
-                  border-2 border-emerald-500 text-emerald-400 bg-transparent
-                  hover:bg-emerald-500 hover:text-white
-                  transition-all duration-150
-                ">
+                <button className="h-9 px-5 text-sm font-semibold border-2 border-emerald-500 text-emerald-500 bg-transparent hover:bg-emerald-500 hover:text-white transition-all duration-150">
                   Se connecter
                 </button>
               </Link>
             </div>
 
-            {/* Liste rôles */}
-            <div className="flex-1 divide-y divide-white/[0.05]">
+            <div className="flex-1 divide-y divide-[var(--color-border)]">
               {roles.map(({ label, desc, color }) => (
                 <div key={label} className="flex items-center gap-4 py-4">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${dot[color]}`} />
-                  <span className="font-semibold text-white text-sm w-36 shrink-0">{label}</span>
-                  <span className="text-slate-500 text-sm">{desc}</span>
+                  <span className="font-semibold text-[var(--color-text)] text-sm w-36 shrink-0">{label}</span>
+                  <span className="text-[var(--color-muted)] text-sm">{desc}</span>
                   <CheckCircle2 className="w-4 h-4 text-emerald-500/50 ml-auto shrink-0" />
                 </div>
               ))}
@@ -175,22 +154,16 @@ export default function HomePage() {
         </section>
 
         {/* ════════ CTA FINAL ════════ */}
-        <section className="border-t border-white/[0.06]" style={{ background: "rgba(10,18,32,0.7)" }}>
+        <section className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-            <h2 className="text-2xl md:text-3xl font-extrabold font-display text-white mb-4">
+            <h2 className="text-2xl md:text-3xl font-extrabold font-display text-[var(--color-text)] mb-4">
               Prêt à commencer ?
             </h2>
-            <p className="text-slate-400 text-base mb-8">
+            <p className="text-[var(--color-muted)] text-base mb-8">
               Connectez-vous à votre espace et commencez à gérer votre laboratoire.
             </p>
             <Link href="/login">
-              <button className="
-                h-11 px-10 text-sm font-bold
-                bg-emerald-500 text-white border-2 border-emerald-500
-                hover:bg-emerald-600 hover:border-emerald-600
-                active:bg-emerald-700
-                transition-all duration-150 inline-flex items-center gap-2 group shadow
-              ">
+              <button className="h-11 px-10 text-sm font-bold bg-emerald-500 text-white border-2 border-emerald-500 hover:bg-emerald-600 hover:border-emerald-600 active:bg-emerald-700 transition-all duration-150 inline-flex items-center gap-2 group shadow">
                 Se connecter
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
@@ -201,14 +174,14 @@ export default function HomePage() {
       </main>
 
       {/* ════════ FOOTER ════════ */}
-      <footer className="border-t border-white/[0.05] py-6 relative z-10" style={{ background: "rgba(5,12,26,0.98)" }}>
-        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
+      <footer className="border-t border-[var(--color-border)] py-6 relative z-10 bg-[var(--color-surface)]">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--color-muted)]">
 
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
               <Activity className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-slate-500">
+            <span className="font-semibold text-[var(--color-muted)]">
               Nova<span className="text-emerald-500">Bio</span> Lab Platform
             </span>
           </div>
@@ -220,7 +193,7 @@ export default function HomePage() {
               { label: "À Propos",        href: "/about"     },
               { label: "Connexion",       href: "/login"     },
             ].map(({ label, href }) => (
-              <Link key={label} href={href} className="hover:text-slate-400 transition-colors">{label}</Link>
+              <Link key={label} href={href} className="hover:text-[var(--color-text)] transition-colors">{label}</Link>
             ))}
           </nav>
 

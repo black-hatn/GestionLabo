@@ -37,10 +37,10 @@ export function Navbar() {
             <Activity className="w-5 h-5 text-white" />
           </div>
           <div className="flex flex-col leading-none">
-            <span className="font-extrabold text-[17px] text-white font-display">
+            <span className="font-extrabold text-[17px] text-white light:text-slate-900 font-display">
               Nova<span className="text-emerald-400">Bio</span>
             </span>
-            <span className="text-[9px] font-semibold text-slate-500 tracking-[0.18em] uppercase">Lab Platform</span>
+            <span className="text-[9px] font-semibold text-slate-500 light:text-slate-400 tracking-[0.18em] uppercase">Lab Platform</span>
           </div>
         </Link>
 
@@ -55,8 +55,8 @@ export function Navbar() {
                 className={`
                   px-4 py-2 text-sm font-medium transition-colors duration-150 border-b-2
                   ${active
-                    ? "text-emerald-400 border-emerald-400"
-                    : "text-slate-400 border-transparent hover:text-white hover:border-white/30"
+                    ? "text-emerald-500 border-emerald-400"
+                    : "text-slate-400 light:text-slate-600 border-transparent hover:text-white light:hover:text-slate-900 hover:border-white/30 light:hover:border-slate-400"
                   }
                 `}
               >
