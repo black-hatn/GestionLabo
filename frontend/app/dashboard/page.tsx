@@ -125,31 +125,53 @@ export default function DashboardPage() {
 
   /* Stats live */
   const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError]     = useState(false);
   const [stats, setStats] = useState({ patients: 0, exams: 0, results: 0, invoices: 0 });
   const [critiques, setCritiques] = useState(0);
 
   const loadStats = useCallback(async () => {
     setStatsLoading(true);
+    setStatsError(false);
+    const newStats = { patients: 0, exams: 0, results: 0, invoices: 0 };
+    let failed = 0;
+
     try {
-      const [p, e, r, inv] = await Promise.all([
-        patientService.getPatients(1, 1),
-        examRequestService.getExamRequests(1, 1),
-        resultService.getResults(1, 1),
-        invoiceService.getInvoices(1, 1),
-      ]);
-      setStats({
-        patients: p.total ?? 0,
-        exams:    e.total ?? 0,
-        results:  r.total ?? 0,
-        invoices: inv.total ?? 0,
-      });
-      // Compter les résultats critiques réels
-      const allResults = await resultService.getResults(1, 100);
-      const crit = (allResults.items ?? []).filter((res: any) => res.status === "CRITIQUE").length;
-      setCritiques(crit);
-    } catch { /* silent */ }
-    finally { setStatsLoading(false); }
-  }, []);
+      const p = await patientService.getPatients(1, 1);
+      newStats.patients = p?.total ?? 0;
+    } catch { failed++; }
+
+    try {
+      const e = await examRequestService.getExamRequests(1, 1);
+      newStats.exams = e?.total ?? 0;
+    } catch { failed++; }
+
+    if (role === "ADMIN" || role === "DOCTOR" || role === "LAB_TECH" || role === "COLLECTOR") {
+      try {
+        const r = await resultService.getResults(1, 1);
+        newStats.results = r?.total ?? 0;
+      } catch { failed++; }
+    }
+
+    if (role === "ADMIN" || role === "RECEPTIONIST" || role === "DOCTOR" || role === "LAB_TECH") {
+      try {
+        const inv = await invoiceService.getInvoices(1, 1);
+        newStats.invoices = inv?.total ?? 0;
+      } catch { failed++; }
+    }
+
+    setStats(newStats);
+    if (failed > 0) setStatsError(true);
+
+    if (role === "ADMIN" || role === "DOCTOR" || role === "LAB_TECH" || role === "COLLECTOR") {
+      try {
+        const allResults = await resultService.getResults(1, 100);
+        const crit = (allResults?.items ?? []).filter((res: any) => res.status === "CRITIQUE").length;
+        setCritiques(crit);
+      } catch { /* non bloquant */ }
+    }
+
+    setStatsLoading(false);
+  }, [role]);
 
   useEffect(() => { if (isValidRole) loadStats(); }, [isValidRole, loadStats]);
 
@@ -248,6 +270,15 @@ export default function DashboardPage() {
               Voir <ChevronRight className="w-3 h-3" />
             </button>
           </Link>
+        </div>
+      )}
+
+      {/* ── Erreur stats ── */}
+      {statsError && !statsLoading && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] text-amber-400 text-sm">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>Certaines statistiques n&apos;ont pas pu être chargées. Vérifiez la connexion au serveur.</span>
+          <button onClick={loadStats} className="ml-auto text-xs font-bold underline hover:no-underline">Réessayer</button>
         </div>
       )}
 

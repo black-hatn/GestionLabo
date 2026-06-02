@@ -32,8 +32,12 @@ function fmt(d: string) {
 function fmtTime(d: string) {
   return new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
-function fmtAmount(n: number | string) {
-  return parseFloat(String(n)).toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " €";
+function fmtAmount(n: number | string, currency = "XOF") {
+  const num = parseFloat(String(n));
+  if (currency === "XOF") {
+    return num.toLocaleString("fr-FR", { minimumFractionDigits: 0 }) + " FCFA";
+  }
+  return num.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) + " " + currency;
 }
 
 function MethodBadge({ method }: { method: PaymentMethod }) {
@@ -227,7 +231,9 @@ export default function PaymentsPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    invoiceService.getInvoices(1, 200).then(r => setInvoices(r.items || [])).catch(() => {});
+    invoiceService.getInvoices(1, 200)
+      .then(r => setInvoices(r.items || []))
+      .catch(() => toast.error("Impossible de charger la liste des factures"));
   }, []);
 
   const handleDelete = async (p: Payment) => {
@@ -263,7 +269,7 @@ export default function PaymentsPage() {
 
   return (
     <ProtectedRoute>
-      <RoleGuard allowedRoles={["ADMIN"]}>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST"]}>
         <div className="space-y-6 animate-fade-in">
 
           {/* Header */}

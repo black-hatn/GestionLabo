@@ -353,7 +353,9 @@ export default function ResultsPage() {
         id: er.id,
         label: `${er.patient_name ?? er.patient_id} — ${er.exam_name ?? er.exam_id} (${er.status})`,
       })));
-    } catch { /* silent */ }
+    } catch (err: any) {
+      toast.error("Impossible de charger les demandes d'examens disponibles");
+    }
   }, []);
 
   const openCreate = () => { setFormError(null); loadExamRequests(); setModal({ type: "create" }); };

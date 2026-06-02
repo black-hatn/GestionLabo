@@ -13,6 +13,7 @@ import { type ExamRequest, type ExamRequestStatus } from "@/services/api/exam-re
 import patientService, { type Patient } from "@/services/api/patient";
 import examService from "@/services/api/exam";
 import { useAuthStore } from "@/lib/auth-store";
+import { toast } from "@/lib/toast-store";
 import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 import {
   useExamRequests,
@@ -285,7 +286,9 @@ export default function ExamRequestsPage() {
         id: ex.id,
         label: `${ex.name}${ex.unit ? ` — ${ex.unit}` : ""}`,
       })));
-    } catch { /* silent */ }
+    } catch (err: any) {
+      toast.error("Impossible de charger les patients et examens disponibles");
+    }
   }, []);
 
   const openCreate = () => { setFormError(null); loadDropdowns(); setModal({ type: "create" }); };

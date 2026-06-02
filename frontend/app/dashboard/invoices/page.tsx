@@ -462,7 +462,9 @@ export default function InvoicesPage() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    patientService.getPatients(1, 200).then(r => setPatients(r.items || [])).catch(() => {});
+    patientService.getPatients(1, 200)
+      .then(r => setPatients(r.items || []))
+      .catch(() => toast.error("Impossible de charger la liste des patients"));
   }, []);
 
   const handleDelete = async (inv: Invoice) => {

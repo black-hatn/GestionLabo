@@ -81,7 +81,7 @@ const RECEPTIONIST_PERMISSIONS: RolePermissions = {
 
 const COLLECTOR_PERMISSIONS: RolePermissions = {
   patients: { read: true, create: false, update: false, delete: false },
-  exams: { read: true, create: false, update: true, delete: false },
+  exams: { read: true, create: false, update: false, delete: false },
   results: { read: true, create: false, update: false, delete: false },
   invoices: { read: false, create: false, update: false, delete: false },
   payments: { read: false, create: false, update: false, delete: false },
