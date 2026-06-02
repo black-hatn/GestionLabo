@@ -9,6 +9,7 @@
   --color-bg:           #050c1a;
   --color-surface:      #0c1828;
   --color-surface-2:    #111f33;
+  --color-sidebar:      linear-gradient(180deg, #0a1525 0%, #060e1c 100%);
   --color-border:       rgba(255,255,255,0.07);
   --color-border-hover: rgba(255,255,255,0.15);
   --color-text:         #e8f0fe;
@@ -43,6 +44,7 @@
   --color-border-hover: rgba(0,0,0,0.18);
   --color-text:         #0f172a;
   --color-muted:        #64748b;
+  --color-sidebar:      linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
 
   --shadow-card:        0 1px 8px rgba(0,0,0,0.08), 0 4px 24px rgba(0,0,0,0.06);
   --shadow-card-hover:  0 4px 24px rgba(0,0,0,0.12), 0 8px 40px rgba(0,0,0,0.08);

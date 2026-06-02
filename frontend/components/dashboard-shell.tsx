@@ -27,7 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   if (!isMounted || !accessToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#050c1a" }}>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 rounded-full border-2 border-emerald-500/30 border-t-emerald-500 animate-spin" />
           <p className="text-sm font-medium text-slate-500">Chargement...</p>
@@ -37,7 +37,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#050c1a" }}>
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg)] transition-colors duration-300">
       <Navbar />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />

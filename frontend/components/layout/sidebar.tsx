@@ -104,13 +104,13 @@ export function Sidebar() {
         "hidden md:flex flex-col shrink-0 transition-all duration-300 ease-in-out border-r border-white/[0.05] relative select-none",
         collapsed ? "w-[68px]" : "w-60"
       )}
-      style={{ background: "linear-gradient(180deg, #0a1525 0%, #060e1c 100%)" }}
+      style={{ background: "var(--color-sidebar)" }}
     >
       {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
         className="absolute top-7 -right-3 w-6 h-6 rounded-full flex items-center justify-center text-slate-500 hover:text-white transition-all z-50 border border-white/[0.08] shadow-card hover:border-emerald-500/30"
-        style={{ background: "#0a1525" }}
+        style={{ background: "var(--color-surface)" }}
         aria-label="Réduire la barre latérale"
       >
         {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
