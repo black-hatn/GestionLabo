@@ -49,7 +49,7 @@ const dot: Record<string, string> = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#050c1a" }}>
+    <div className="min-h-screen flex flex-col bg-[var(--color-bg)] transition-colors duration-300">
 
       {/* Ambient glow */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Activity, Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navLinks = [
   { href: "/",          label: "Accueil"         },
@@ -28,7 +29,7 @@ export function Navbar() {
         className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between h-[64px] px-6 sm:px-10 transition-all duration-300 ${
           scrolled ? "border-b border-white/[0.08] shadow-sm" : ""
         }`}
-        style={{ background: scrolled ? "rgba(5,12,26,0.95)" : "rgba(5,12,26,0.7)", backdropFilter: "blur(12px)" }}
+        style={{ background: scrolled ? "color-mix(in srgb, var(--color-bg) 95%, transparent)" : "color-mix(in srgb, var(--color-bg) 70%, transparent)", backdropFilter: "blur(12px)" }}
       >
         {/* ── Logo ── */}
         <Link href="/" className="flex items-center gap-2.5 group shrink-0">
@@ -67,6 +68,7 @@ export function Navbar() {
 
         {/* ── Boutons Bootstrap ── */}
         <div className="flex items-center gap-2">
+          <ThemeToggle compact />
           {/* Outline button */}
           <Link href="/login" className="hidden sm:block">
             <button className="
@@ -109,10 +111,10 @@ export function Navbar() {
           className="fixed inset-0 z-40 md:hidden"
           onClick={() => setMobileOpen(false)}
         >
-          <div className="absolute inset-0 bg-[#050c1a]/90 backdrop-blur-xl" />
+          <div className="absolute inset-0 backdrop-blur-xl" style={{ background: "color-mix(in srgb, var(--color-bg) 90%, transparent)" }} />
           <nav
             className="absolute top-[64px] left-0 right-0 border-t border-white/[0.08] py-4 px-6 flex flex-col gap-1"
-            style={{ background: "rgba(5,12,26,0.98)" }}
+            style={{ background: "color-mix(in srgb, var(--color-bg) 98%, transparent)" }}
             onClick={e => e.stopPropagation()}
           >
             {navLinks.map(({ href, label }) => (
@@ -126,6 +128,10 @@ export function Navbar() {
               </Link>
             ))}
             <div className="mt-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between py-2 px-4 border-b border-white/[0.05]">
+                <span className="text-sm text-slate-400 font-medium">Thème</span>
+                <ThemeToggle />
+              </div>
               <Link href="/login" onClick={() => setMobileOpen(false)}>
                 <button className="w-full h-10 text-sm font-semibold border-2 border-emerald-500 text-emerald-400 bg-transparent hover:bg-emerald-500 hover:text-white transition-all">
                   Connexion
