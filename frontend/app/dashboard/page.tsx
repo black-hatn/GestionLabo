@@ -265,11 +265,24 @@ export default function DashboardPage() {
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-              </span>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Système opérationnel</span>
+              {statsError ? (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
+                  </span>
+                  <span className="text-xs font-bold text-red-400 uppercase tracking-widest">
+                    {waking ? "Réveil du serveur…" : "Serveur hors ligne"}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                  </span>
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Système opérationnel</span>
+                </>
+              )}
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white font-display">
               Bienvenue, {user?.first_name || "Utilisateur"} 👋
