@@ -138,6 +138,10 @@ export default function DashboardPage() {
     setStatsError(false);
     const newStats = { patients: 0, exams: 0, results: 0, invoices: 0 };
     let failed = 0;
+    // Nombre de requêtes attendues selon le rôle
+    let totalExpected = 2; // patients + exams toujours
+    if (["ADMIN","DOCTOR","LAB_TECH","COLLECTOR"].includes(role)) totalExpected++;
+    if (["ADMIN","RECEPTIONIST","DOCTOR","LAB_TECH"].includes(role)) totalExpected++;
 
     try {
       const p = await patientService.getPatients(1, 1);
@@ -164,7 +168,9 @@ export default function DashboardPage() {
     }
 
     setStats(newStats);
-    if (failed > 0) setStatsError(true);
+    // Wake-up seulement si TOUTES les requêtes échouent (serveur endormi)
+    // Une erreur partielle = donnée absente, pas serveur HS
+    if (failed === totalExpected) setStatsError(true);
 
     if (role === "ADMIN" || role === "DOCTOR" || role === "LAB_TECH" || role === "COLLECTOR") {
       try {
