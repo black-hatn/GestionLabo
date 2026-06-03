@@ -49,10 +49,15 @@ interface CreateFormProps {
   patients: { id: string; label: string }[];
   exams: { id: string; label: string }[];
   userId: string;
+  dropdownLoading: boolean;
+  dropdownError: boolean;
+  onRetryDropdowns: () => void;
   onSubmit: (data: { patient_id: string; doctor_id: string; exam_id: string; sample_type: string; clinical_info?: string }) => void;
 }
 
-function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams, userId, onSubmit }: CreateFormProps) {
+const SELECT_CLS = "w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200 bg-white border-slate-200 text-slate-800";
+
+function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams, userId, dropdownLoading, dropdownError, onRetryDropdowns, onSubmit }: CreateFormProps) {
   const [patientId, setPatientId]   = useState("");
   const [examId, setExamId]         = useState("");
   const [sampleType, setSampleType] = useState("");
@@ -87,6 +92,26 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
 
         <form onSubmit={e => { e.preventDefault(); onSubmit({ patient_id: patientId, doctor_id: userId, exam_id: examId, sample_type: sampleType, clinical_info: clinicalInfo || undefined }); }}>
           <div className="px-6 py-5 space-y-4">
+
+            {/* Chargement listes */}
+            {dropdownLoading && (
+              <div className="flex items-center gap-2 text-xs dark:text-slate-500 text-slate-400">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />Chargement des patients et examens…
+              </div>
+            )}
+
+            {/* Erreur listes */}
+            {dropdownError && !dropdownLoading && (
+              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-400 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                Impossible de charger les listes.
+                <button type="button" onClick={onRetryDropdowns} className="ml-auto text-xs font-bold underline hover:no-underline shrink-0">
+                  Réessayer
+                </button>
+              </div>
+            )}
+
+            {/* Erreur soumission */}
             {error && (
               <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4 shrink-0" />{error}
@@ -96,9 +121,8 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
             <div>
               <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5">Patient *</label>
               <select required value={patientId} onChange={e => setPatientId(e.target.value)}
-                className="w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40
-                  dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200 bg-white border-slate-200 text-slate-800">
-                <option value="">— Sélectionner un patient —</option>
+                disabled={dropdownLoading} className={SELECT_CLS}>
+                <option value="">{dropdownLoading ? "Chargement…" : "— Sélectionner un patient —"}</option>
                 {patients.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </div>
@@ -106,9 +130,8 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
             <div>
               <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5">Type d&apos;examen *</label>
               <select required value={examId} onChange={e => setExamId(e.target.value)}
-                className="w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40
-                  dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200 bg-white border-slate-200 text-slate-800">
-                <option value="">— Sélectionner un examen —</option>
+                disabled={dropdownLoading} className={SELECT_CLS}>
+                <option value="">{dropdownLoading ? "Chargement…" : "— Sélectionner un examen —"}</option>
                 {exams.map(ex => <option key={ex.id} value={ex.id}>{ex.label}</option>)}
               </select>
             </div>
@@ -130,7 +153,7 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
 
           <div className="flex gap-3 px-6 py-4 dark:border-t dark:border-white/[0.07] border-t border-slate-100">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1 btn-ghost h-10">Annuler</Button>
-            <Button type="submit" disabled={saving} className="flex-1 btn-emerald h-10 text-sm font-bold">
+            <Button type="submit" disabled={saving || dropdownLoading} className="flex-1 btn-emerald h-10 text-sm font-bold">
               {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Créer la demande
             </Button>
@@ -255,8 +278,10 @@ export default function ExamRequestsPage() {
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
 
-  const [patientOptions, setPatientOptions] = useState<{ id: string; label: string }[]>([]);
-  const [examOptions, setExamOptions]       = useState<{ id: string; label: string }[]>([]);
+  const [patientOptions, setPatientOptions]   = useState<{ id: string; label: string }[]>([]);
+  const [examOptions, setExamOptions]         = useState<{ id: string; label: string }[]>([]);
+  const [dropdownLoading, setDropdownLoading] = useState(false);
+  const [dropdownError, setDropdownError]     = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -280,6 +305,8 @@ export default function ExamRequestsPage() {
     : null;
 
   const loadDropdowns = useCallback(async () => {
+    setDropdownLoading(true);
+    setDropdownError(false);
     try {
       const [patRes, exRes] = await Promise.all([
         patientService.getPatients(1, 200),
@@ -293,12 +320,22 @@ export default function ExamRequestsPage() {
         id: ex.id,
         label: `${ex.name}${ex.unit ? ` — ${ex.unit}` : ""}`,
       })));
-    } catch (err: any) {
-      toast.error("Impossible de charger les patients et examens disponibles");
+    } catch {
+      setDropdownError(true);
+    } finally {
+      setDropdownLoading(false);
     }
   }, []);
 
-  const openCreate = () => { setFormError(null); loadDropdowns(); setModal({ type: "create" }); };
+  // Préchargement au mount — listes disponibles avant ouverture dialog
+  useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
+
+  const openCreate = () => {
+    setFormError(null);
+    // Recharge si vide (ex: premier échec au mount)
+    if (patientOptions.length === 0 || examOptions.length === 0) loadDropdowns();
+    setModal({ type: "create" });
+  };
   const openView   = (er: ExamRequest) => setModal({ type: "view", er });
   const openDelete = (er: ExamRequest) => setModal({ type: "delete", er });
   const closeModal = () => { setModal({ type: "idle" }); setFormError(null); };
@@ -522,6 +559,9 @@ export default function ExamRequestsPage() {
           patients={patientOptions}
           exams={examOptions}
           userId={user?.id ?? ""}
+          dropdownLoading={dropdownLoading}
+          dropdownError={dropdownError}
+          onRetryDropdowns={loadDropdowns}
           onSubmit={handleCreate}
         />
 
