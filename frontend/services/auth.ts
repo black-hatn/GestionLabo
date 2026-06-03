@@ -33,7 +33,7 @@ class AuthService {
         password,
         first_name,
         last_name,
-        role: 'USER'
+        role: 'DOCTOR'
       })
     });
 
@@ -74,6 +74,14 @@ class AuthService {
       }
     } catch (_) {
       // Non-blocking: will degrade gracefully
+    }
+
+    // ── Stocker les tokens en localStorage (pour le refresh) ──
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(this.TOKEN_KEY, tokens.access_token);
+      if (tokens.refresh_token) {
+        localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refresh_token);
+      }
     }
 
     // ── Hydrater le store Zustand (source de vérité unique) ──

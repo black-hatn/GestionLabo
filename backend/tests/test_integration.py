@@ -8,16 +8,16 @@ def test_auth_and_patients_flow(client, db):
     register = client.post(
         "/api/v1/auth/register",
         json={
-            "email": "doctor@example.com",
+            "email": "receptionist@example.com",
             "password": "password123",
-            "first_name": "Doc",
-            "last_name": "Tor",
-            "role": "DOCTOR",
+            "first_name": "Recep",
+            "last_name": "Tionist",
+            "role": "RECEPTIONIST",
         },
     )
     assert register.status_code in (201, 400)
 
-    login = client.post("/api/v1/auth/login", json={"email": "doctor@example.com", "password": "password123"})
+    login = client.post("/api/v1/auth/login", json={"email": "receptionist@example.com", "password": "password123"})
     assert login.status_code == 200
     token = login.json()["access_token"]
 

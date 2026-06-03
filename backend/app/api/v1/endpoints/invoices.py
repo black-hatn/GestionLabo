@@ -39,10 +39,7 @@ def list_invoices(
     query = select(Invoice)
     count_query = select(func.count()).select_from(Invoice)
 
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
-        query = query.join(Patient, Invoice.patient_id == Patient.id).where(Patient.email == current_user.email)
-        count_query = count_query.join(Patient, Invoice.patient_id == Patient.id).where(Patient.email == current_user.email)
-    elif current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH, UserRole.RECEPTIONIST]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
 
     if status_filter:
@@ -80,12 +77,7 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
-        from app.models.patient import Patient
-        patient = db.get(Patient, invoice.patient_id)
-        if not patient or patient.email != current_user.email:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this invoice")
-    elif current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH]:
+    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH, UserRole.RECEPTIONIST]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
 
     # Auto-workflow: marquer la facture en retard si nécessaire
@@ -97,7 +89,7 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
     return invoice
 
 @router.post("", response_model=InvoiceRead, status_code=status.HTTP_201_CREATED)
-def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.DOCTOR))):
+def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.DOCTOR, UserRole.RECEPTIONIST))):
     """Create a new invoice"""
     import uuid
     
@@ -122,7 +114,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), curren
     return invoice
 
 @router.put("/{invoice_id}", response_model=InvoiceRead)
-def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH))):
+def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.RECEPTIONIST))):
     """Update an invoice"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:

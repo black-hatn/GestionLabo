@@ -8,12 +8,12 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 20000, // 20s — couvre le cold-start Render (~15s)
 });
 
-// Lit le token depuis zustand (source de vérité) OU localStorage fallback
+// Source de vérité unique : Zustand persist sous "novabio-auth"
 function getAuthToken(): string | null {
   try {
-    // Zustand persist stocke sous "novabio-auth" dans localStorage
     if (typeof window !== 'undefined') {
       const raw = localStorage.getItem('novabio-auth');
       if (raw) {
@@ -23,22 +23,30 @@ function getAuthToken(): string | null {
       }
     }
   } catch { /* ignore */ }
-  // Fallback: AuthService legacy key
   return AuthService.getToken();
 }
 
-// Request interceptor - add token to every request
+// Met à jour Zustand avec le nouveau token après refresh
+async function syncTokenToZustand(newToken: string): Promise<void> {
+  try {
+    const { useAuthStore } = await import('@/lib/auth-store');
+    const state = useAuthStore.getState();
+    if (state.user) {
+      useAuthStore.getState().login(newToken, state.user);
+    }
+  } catch { /* ignore */ }
+}
+
+// Request interceptor — injecte le Bearer token
 apiClient.interceptors.request.use((config) => {
   const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+}, (error) => Promise.reject(error));
 
-// Response interceptor - handle 401
+// Response interceptor — gère les 401 avec refresh automatique
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -47,19 +55,22 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
-        await AuthService.refreshToken();
-        const token = AuthService.getToken();
-        if (token && originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return apiClient(originalRequest);
+        const tokens = await AuthService.refreshToken();
+        // Synchronise le nouveau token dans Zustand (source de vérité)
+        await syncTokenToZustand(tokens.access_token);
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
         }
+        return apiClient(originalRequest);
       } catch {
-        // Refresh échoué → déconnexion et redirection sans afficher "Network Error"
+        // Refresh échoué → déconnexion silencieuse
+        const { useAuthStore } = await import('@/lib/auth-store').catch(() => ({ useAuthStore: null }));
+        useAuthStore?.getState().logout();
         AuthService.logout();
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
-        return new Promise(() => {}); // promesse jamais résolue = page reste silencieuse
+        return new Promise(() => {}); // promesse jamais résolue — page reste silencieuse
       }
     }
 

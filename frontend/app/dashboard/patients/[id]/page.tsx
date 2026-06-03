@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -59,7 +59,7 @@ export default function PatientDetailPage() {
   const [address, setAddress] = useState("");
   const [insuranceNumber, setInsuranceNumber] = useState("");
 
-  const loadPatientData = async () => {
+  const loadPatientData = useCallback(async () => {
     if (!accessToken || !id) return;
     setLoading(true);
     try {
@@ -88,11 +88,11 @@ export default function PatientDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken, id]);
 
   useEffect(() => {
     void loadPatientData();
-  }, [accessToken, id]);
+  }, [loadPatientData]);
 
   const handleUpdate = async (e: FormEvent) => {
     e.preventDefault();

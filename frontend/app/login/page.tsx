@@ -206,7 +206,7 @@ export default function LoginPage() {
               style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
               <span style={{ color: "#64748b" }}>Pas encore de compte ?{" "}</span>
               <Link href="/register" className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">
-                Contacter l&apos;équipe
+                S&apos;inscrire
               </Link>
             </div>
           </div>

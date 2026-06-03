@@ -29,7 +29,7 @@ def test_register_success(client, db):
             "password": "SecurePass123!",
             "first_name": "Jean",
             "last_name": "Dupont",
-            "role": "USER"
+            "role": "DOCTOR"
         }
     )
     assert response.status_code == 201
@@ -44,7 +44,7 @@ def test_register_duplicate_email(client, db):
             "password": "SecurePass123!",
             "first_name": "Test",
             "last_name": "User",
-            "role": "USER"
+            "role": "DOCTOR"
         }
     )
     assert response.status_code == 400
