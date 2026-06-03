@@ -32,7 +32,7 @@ export default function SettingsPage() {
   const [isSavingPw, setIsSavingPw] = useState(false);
   const [isSavingNotifs, setIsSavingNotifs] = useState(false);
 
-  // SMTP / Email notifications state (local only)
+  // Préférences de notification — persistées en localStorage par utilisateur
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -50,13 +50,14 @@ export default function SettingsPage() {
     confirmPassword: "",
   });
 
-  const [notifications, setNotifications] = useState({
+  const NOTIF_DEFAULTS = {
     emailOnNewPatient: true,
     emailOnNewExam: true,
     emailOnNewResult: true,
     emailOnNewInvoice: false,
     emailOnPayment: true,
-  });
+  };
+  const [notifications, setNotifications] = useState(NOTIF_DEFAULTS);
 
   // Load real user data from localStorage / auth store
   useEffect(() => {
@@ -68,10 +69,17 @@ export default function SettingsPage() {
         role: currentUser.role ?? "USER",
       });
     }
-    // Load saved avatar from localStorage — clé par utilisateur pour éviter le partage inter-comptes
+    // Avatar
     const avatarKey = `user_avatar_${currentUser?.id ?? "guest"}`;
     const savedAvatar = localStorage.getItem(avatarKey);
     if (savedAvatar) setAvatarPreview(savedAvatar);
+
+    // Préférences de notification
+    const notifKey = `notif_prefs_${currentUser?.id ?? "guest"}`;
+    const savedNotifs = localStorage.getItem(notifKey);
+    if (savedNotifs) {
+      try { setNotifications(JSON.parse(savedNotifs)); } catch { /* ignore */ }
+    }
   }, [currentUser]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,10 +157,11 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSaveNotifications = async (e: FormEvent) => {
+  const handleSaveNotifications = (e: FormEvent) => {
     e.preventDefault();
     setIsSavingNotifs(true);
-    await new Promise(r => setTimeout(r, 600));
+    const notifKey = `notif_prefs_${currentUser?.id ?? "guest"}`;
+    localStorage.setItem(notifKey, JSON.stringify(notifications));
     setIsSavingNotifs(false);
     toast.success("Préférences de notification enregistrées");
   };

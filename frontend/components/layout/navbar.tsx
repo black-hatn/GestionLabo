@@ -11,6 +11,47 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import resultService, { ResultItem } from "@/services/api/result";
 
+/* ── Composant badge santé backend ─────────────────────────────────────── */
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+
+function SystemStatus() {
+  const [status, setStatus] = useState<"checking" | "ok" | "down">("checking");
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_BASE.replace("/api/v1", "")}/health`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!cancelled) setStatus(res.ok ? "ok" : "down");
+      } catch {
+        if (!cancelled) setStatus("down");
+      }
+    };
+    check();
+    const id = setInterval(check, 5 * 60 * 1000); // re-vérif toutes les 5 min
+    return () => { cancelled = true; clearInterval(id); };
+  }, []);
+
+  if (status === "checking") return null;
+
+  const ok = status === "ok";
+  return (
+    <div className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border ml-2 ${
+      ok ? "border-emerald-500/20" : "border-red-500/20"
+    }`} style={{ background: ok ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)" }}>
+      <span className="relative flex h-1.5 w-1.5">
+        {ok && <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />}
+        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${ok ? "bg-emerald-500" : "bg-red-500"}`} />
+      </span>
+      <span className={`text-[10px] font-bold tracking-wide ${ok ? "text-emerald-400/80" : "text-red-400/80"}`}>
+        {ok ? "Système OK" : "Serveur hors ligne"}
+      </span>
+    </div>
+  );
+}
+
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   ADMIN:        { label: "Administrateur", color: "text-red-400 border-red-500/25 bg-red-500/8"         },
   RECEPTIONIST: { label: "Réceptionniste", color: "text-indigo-400 border-indigo-500/25 bg-indigo-500/8" },
@@ -93,14 +134,8 @@ export function Navbar() {
           </span>
         </Link>
 
-        {/* System status */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/20 ml-2" style={{ background: "rgba(16,185,129,0.06)" }}>
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-          </span>
-          <span className="text-[10px] font-bold text-emerald-400/80 tracking-wide">Système OK</span>
-        </div>
+        {/* System status — vrai health check */}
+        <SystemStatus />
       </div>
 
       {/* Center: Search */}

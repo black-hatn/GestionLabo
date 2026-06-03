@@ -7,6 +7,8 @@ from app.config.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.patient import Patient
 from app.models.exam_request import ExamRequest
+from app.models.exam import Exam
+from app.models.result import Result
 from app.models.payment import Payment
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -122,8 +124,48 @@ def get_time_series(
         .order_by(cast(Invoice.created_at, SQLDate))
     ).all()
 
+    # Daily exam requests created
+    exam_req_daily = db.execute(
+        select(
+            cast(ExamRequest.requested_at, SQLDate).label("day"),
+            func.count(ExamRequest.id).label("count")
+        )
+        .where(cast(ExamRequest.requested_at, SQLDate) >= start)
+        .group_by(cast(ExamRequest.requested_at, SQLDate))
+        .order_by(cast(ExamRequest.requested_at, SQLDate))
+    ).all()
+
+    # Daily results created
+    result_daily = db.execute(
+        select(
+            cast(Result.tested_at, SQLDate).label("day"),
+            func.count(Result.id).label("count")
+        )
+        .where(cast(Result.tested_at, SQLDate) >= start)
+        .group_by(cast(Result.tested_at, SQLDate))
+        .order_by(cast(Result.tested_at, SQLDate))
+    ).all()
+
     return {
         "period_days": days,
-        "patients_daily": [{"date": str(r.day), "count": r.count} for r in patient_daily],
-        "invoices_daily": [{"date": str(r.day), "count": r.count, "revenue": float(r.revenue or 0)} for r in invoice_daily],
+        "patients_daily":      [{"date": str(r.day), "count": r.count} for r in patient_daily],
+        "invoices_daily":      [{"date": str(r.day), "count": r.count, "revenue": float(r.revenue or 0)} for r in invoice_daily],
+        "exam_requests_daily": [{"date": str(r.day), "count": r.count} for r in exam_req_daily],
+        "results_daily":       [{"date": str(r.day), "count": r.count} for r in result_daily],
     }
+
+
+@router.get("/exams-by-type")
+def get_exams_by_type(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Nombre de demandes d'examens regroupées par type d'examen."""
+    rows = db.execute(
+        select(Exam.name, func.count(ExamRequest.id).label("value"))
+        .join(ExamRequest, ExamRequest.exam_id == Exam.id)
+        .group_by(Exam.name)
+        .order_by(func.count(ExamRequest.id).desc())
+        .limit(10)
+    ).all()
+    return [{"name": r.name, "value": r.value} for r in rows]
