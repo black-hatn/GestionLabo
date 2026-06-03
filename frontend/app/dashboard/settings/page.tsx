@@ -68,8 +68,9 @@ export default function SettingsPage() {
         role: currentUser.role ?? "USER",
       });
     }
-    // Load saved avatar from localStorage
-    const savedAvatar = localStorage.getItem("user_avatar");
+    // Load saved avatar from localStorage — clé par utilisateur pour éviter le partage inter-comptes
+    const avatarKey = `user_avatar_${currentUser.id}`;
+    const savedAvatar = localStorage.getItem(avatarKey);
     if (savedAvatar) setAvatarPreview(savedAvatar);
   }, [currentUser]);
 
@@ -84,7 +85,10 @@ export default function SettingsPage() {
     reader.onloadend = () => {
       const b64 = reader.result as string;
       setAvatarPreview(b64);
-      localStorage.setItem("user_avatar", b64);
+      const avatarKey = `user_avatar_${currentUser?.id}`;
+      localStorage.setItem(avatarKey, b64);
+      // Notifie la navbar du changement
+      window.dispatchEvent(new StorageEvent("storage", { key: avatarKey, newValue: b64 }));
       toast.success("Photo de profil mise à jour !");
     };
     reader.readAsDataURL(file);

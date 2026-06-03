@@ -31,12 +31,16 @@ export function Navbar() {
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const savedAvatar = localStorage.getItem("user_avatar");
+    if (!user?.id) return;
+    const avatarKey = `user_avatar_${user.id}`;
+    const savedAvatar = localStorage.getItem(avatarKey);
     if (savedAvatar) setAvatar(savedAvatar);
-    const handleStorageChange = () => setAvatar(localStorage.getItem("user_avatar"));
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === avatarKey) setAvatar(e.newValue);
+    };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [user?.id]);
 
   const loadCritiques = useCallback(async () => {
     setNotifLoading(true);
