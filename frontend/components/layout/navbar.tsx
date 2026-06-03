@@ -19,19 +19,29 @@ function SystemStatus() {
 
   useEffect(() => {
     let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+
     const check = async () => {
       try {
         const res = await fetch(`${API_BASE.replace("/api/v1", "")}/health`, {
           signal: AbortSignal.timeout(5000),
         });
-        if (!cancelled) setStatus(res.ok ? "ok" : "down");
+        if (!cancelled) {
+          const s = res.ok ? "ok" : "down";
+          setStatus(s);
+          // OK → re-vérif dans 5 min ; down → retry dans 10 s
+          timerId = setTimeout(check, s === "ok" ? 5 * 60 * 1000 : 10_000);
+        }
       } catch {
-        if (!cancelled) setStatus("down");
+        if (!cancelled) {
+          setStatus("down");
+          timerId = setTimeout(check, 10_000); // retry rapide tant que hors ligne
+        }
       }
     };
+
     check();
-    const id = setInterval(check, 5 * 60 * 1000); // re-vérif toutes les 5 min
-    return () => { cancelled = true; clearInterval(id); };
+    return () => { cancelled = true; clearTimeout(timerId); };
   }, []);
 
   if (status === "checking") return null;
