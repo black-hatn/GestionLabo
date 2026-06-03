@@ -206,6 +206,7 @@ function CreateModal({
 
 /* ── Page principale ── */
 export default function PaymentsPage() {
+  const user = useAuthStore(s => s.user);
   const [payments, setPayments]       = useState<Payment[]>([]);
   const [invoices, setInvoices]       = useState<Invoice[]>([]);
   const [loading, setLoading]         = useState(true);

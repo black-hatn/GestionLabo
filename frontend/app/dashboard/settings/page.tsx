@@ -69,7 +69,7 @@ export default function SettingsPage() {
       });
     }
     // Load saved avatar from localStorage — clé par utilisateur pour éviter le partage inter-comptes
-    const avatarKey = `user_avatar_${currentUser.id}`;
+    const avatarKey = `user_avatar_${currentUser?.id ?? "guest"}`;
     const savedAvatar = localStorage.getItem(avatarKey);
     if (savedAvatar) setAvatarPreview(savedAvatar);
   }, [currentUser]);
