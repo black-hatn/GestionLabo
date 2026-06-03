@@ -18,6 +18,9 @@ import resultService        from "@/services/api/result";
 import invoiceService       from "@/services/api/invoice";
 
 /* ─ Constants ──────────────────────────────────────────── */
+const API_BASE   = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+const HEALTH_URL = API_BASE.replace("/api/v1", "") + "/health";
+
 const VALID_ROLES = ["ADMIN", "RECEPTIONIST", "COLLECTOR", "LAB_TECH", "DOCTOR"] as const;
 type ValidRole = typeof VALID_ROLES[number];
 
@@ -126,6 +129,7 @@ export default function DashboardPage() {
   /* Stats live */
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError]     = useState(false);
+  const [waking, setWaking]             = useState(false);
   const [stats, setStats] = useState({ patients: 0, exams: 0, results: 0, invoices: 0 });
   const [critiques, setCritiques] = useState(0);
 
@@ -174,6 +178,37 @@ export default function DashboardPage() {
   }, [role]);
 
   useEffect(() => { if (isValidRole) loadStats(); }, [isValidRole, loadStats]);
+
+  /* ── Wake-up automatique ────────────────────────────────────────────────
+   * Quand les stats échouent (serveur Render endormi), on ping /health
+   * toutes les 5s. Dès qu'il répond OK, on recharge les stats. */
+  useEffect(() => {
+    if (!statsError || statsLoading) return;
+
+    setWaking(true);
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+
+    const ping = async () => {
+      try {
+        const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(4000) });
+        if (!cancelled && res.ok) {
+          setWaking(false);
+          loadStats();
+          return; // arrêt du polling
+        }
+      } catch { /* serveur encore endormi */ }
+      if (!cancelled) timerId = setTimeout(ping, 5000);
+    };
+
+    timerId = setTimeout(ping, 3000); // premier ping après 3 s
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+      setWaking(false);
+    };
+  }, [statsError, statsLoading, loadStats]);
 
   /* Rôle invalide → écran d'accès refusé */
   if (!isValidRole) return <AccessDenied role={user?.role ?? "inconnu"} />;
@@ -273,12 +308,31 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Erreur stats ── */}
+      {/* ── Erreur stats / réveil serveur ── */}
       {statsError && !statsLoading && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] text-amber-400 text-sm">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>Certaines statistiques n&apos;ont pas pu être chargées. Vérifiez la connexion au serveur.</span>
-          <button onClick={loadStats} className="ml-auto text-xs font-bold underline hover:no-underline">Réessayer</button>
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all ${
+          waking
+            ? "border-blue-500/25 bg-blue-500/[0.07] text-blue-300"
+            : "border-amber-500/25 bg-amber-500/[0.07] text-amber-400"
+        }`}>
+          {waking ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              <span>
+                Réveil du serveur en cours
+                <span className="animate-pulse">...</span>
+                {" "}Les données se rechargeront automatiquement.
+              </span>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>Certaines statistiques n&apos;ont pas pu être chargées. Vérifiez la connexion au serveur.</span>
+              <button onClick={loadStats} className="ml-auto text-xs font-bold underline hover:no-underline shrink-0">
+                Réessayer
+              </button>
+            </>
+          )}
         </div>
       )}
 
