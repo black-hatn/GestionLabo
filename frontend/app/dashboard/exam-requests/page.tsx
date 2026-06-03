@@ -138,7 +138,31 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
 
             <div>
               <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5">Type de prélèvement *</label>
-              <Input value={sampleType} onChange={e => setSampleType(e.target.value)} placeholder="Ex : Sang veineux, Urine, Selles…" required />
+              <div className="flex flex-wrap gap-2 mb-2">
+                {["Sang veineux","Sang capillaire","Urine","Selles","Écouvillon nasal","Écouvillon gorge","LCR","Liquide pleural","Salive","Autre"].map(opt => (
+                  <button
+                    key={opt} type="button"
+                    onClick={() => setSampleType(opt === "Autre" ? "" : opt)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      sampleType === opt || (opt === "Autre" && !["Sang veineux","Sang capillaire","Urine","Selles","Écouvillon nasal","Écouvillon gorge","LCR","Liquide pleural","Salive"].includes(sampleType) && sampleType !== "")
+                        ? "bg-purple-500 text-white border-purple-500"
+                        : "dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-400 bg-slate-50 border-slate-200 text-slate-600 hover:border-purple-400 hover:text-purple-500"
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {/* Champ libre si "Autre" ou valeur custom */}
+              {!["Sang veineux","Sang capillaire","Urine","Selles","Écouvillon nasal","Écouvillon gorge","LCR","Liquide pleural","Salive"].includes(sampleType) && (
+                <Input
+                  value={sampleType}
+                  onChange={e => setSampleType(e.target.value)}
+                  placeholder="Préciser le type de prélèvement…"
+                  required={!["Sang veineux","Sang capillaire","Urine","Selles","Écouvillon nasal","Écouvillon gorge","LCR","Liquide pleural","Salive"].includes(sampleType)}
+                />
+              )}
+              <input type="hidden" value={sampleType} required={sampleType.length === 0 ? true : undefined} />
             </div>
 
             <div>

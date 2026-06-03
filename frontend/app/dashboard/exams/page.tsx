@@ -9,8 +9,9 @@ import examService from "@/services/api/exam";
 import { useAuthStore } from "@/lib/auth-store";
 import {
   AlertCircle, Plus, Edit2, Trash2, Eye, Loader2, Beaker,
-  TrendingUp, Search, RefreshCw, CheckCircle2, XCircle,
+  TrendingUp, Search, RefreshCw, CheckCircle2, XCircle, Download,
 } from "lucide-react";
+import { toast } from "@/lib/toast-store";
 import { useExamActions, type ExamData } from "@/hooks/use-exam-actions";
 import { ExamDetailSheet }    from "@/components/dashboard/exam-detail-sheet";
 import { ExamFormDialog }     from "@/components/dashboard/exam-form-dialog";
@@ -28,6 +29,24 @@ export default function ExamsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIF" | "INACTIF">("ALL");
+  const [seeding, setSeeding]       = useState(false);
+
+  const handleSeedDefaults = async () => {
+    setSeeding(true);
+    try {
+      const res = await examService.seedDefaults();
+      if (res.inserted === 0) {
+        toast.info("Tous les examens standards sont déjà présents.");
+      } else {
+        toast.success(`${res.inserted} examen${res.inserted > 1 ? "s" : ""} standard${res.inserted > 1 ? "s" : ""} importé${res.inserted > 1 ? "s" : ""} !`);
+      }
+      loadExams();
+    } catch {
+      toast.error("Impossible d'importer les examens standards.");
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   // ── Data loading ──────────────────────────────────────────────────────────
   const loadExams = useCallback(async () => {
@@ -143,6 +162,21 @@ export default function ExamsPage() {
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
                 Actualiser
               </Button>
+
+              {/* Seed defaults — admin only */}
+              {canDelete && (
+              <Button
+                onClick={handleSeedDefaults}
+                disabled={seeding}
+                variant="outline"
+                className="btn-ghost h-10 px-4 gap-2 text-sm font-semibold"
+              >
+                {seeding
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Download className="w-4 h-4" />}
+                Importer standards
+              </Button>
+              )}
 
               {/* Add */}
               {canEdit && (

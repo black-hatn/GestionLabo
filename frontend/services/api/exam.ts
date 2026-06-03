@@ -45,7 +45,12 @@ const examService = {
   async deleteExam(id: string): Promise<{ message: string }> {
     const response = await apiClient.delete<{ message: string }>(`/examens/${id}`);
     return response.data;
-  }
+  },
+
+  async seedDefaults(): Promise<{ inserted: number; total_defaults: number }> {
+    const response = await apiClient.post<{ inserted: number; total_defaults: number }>('/examens/seed-defaults');
+    return response.data;
+  },
 };
 
 export default examService;
