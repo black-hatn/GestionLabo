@@ -51,13 +51,14 @@ interface CreateFormProps {
   userId: string;
   dropdownLoading: boolean;
   dropdownError: boolean;
+  dropdownWaking: boolean;
   onRetryDropdowns: () => void;
   onSubmit: (data: { patient_id: string; doctor_id: string; exam_id: string; sample_type: string; clinical_info?: string }) => void;
 }
 
 const SELECT_CLS = "w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200 bg-white border-slate-200 text-slate-800";
 
-function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams, userId, dropdownLoading, dropdownError, onRetryDropdowns, onSubmit }: CreateFormProps) {
+function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams, userId, dropdownLoading, dropdownError, dropdownWaking, onRetryDropdowns, onSubmit }: CreateFormProps) {
   const [patientId, setPatientId]   = useState("");
   const [examId, setExamId]         = useState("");
   const [sampleType, setSampleType] = useState("");
@@ -100,14 +101,24 @@ function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams
               </div>
             )}
 
-            {/* Erreur listes */}
+            {/* Erreur listes / réveil serveur */}
             {dropdownError && !dropdownLoading && (
-              <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 text-amber-400 text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                Impossible de charger les listes.
-                <button type="button" onClick={onRetryDropdowns} className="ml-auto text-xs font-bold underline hover:no-underline shrink-0">
-                  Réessayer
-                </button>
+              <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm border ${
+                dropdownWaking
+                  ? "bg-blue-500/10 border-blue-500/20 text-blue-300"
+                  : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+              }`}>
+                {dropdownWaking ? (
+                  <><Loader2 className="w-4 h-4 animate-spin shrink-0" />Réveil du serveur… rechargement auto.</>
+                ) : (
+                  <>
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    Impossible de charger les listes.
+                    <button type="button" onClick={onRetryDropdowns} className="ml-auto text-xs font-bold underline hover:no-underline shrink-0">
+                      Réessayer
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -306,6 +317,7 @@ export default function ExamRequestsPage() {
   const [examOptions, setExamOptions]         = useState<{ id: string; label: string }[]>([]);
   const [dropdownLoading, setDropdownLoading] = useState(false);
   const [dropdownError, setDropdownError]     = useState(false);
+  const [dropdownWaking, setDropdownWaking]   = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -351,8 +363,27 @@ export default function ExamRequestsPage() {
     }
   }, []);
 
-  // Préchargement au mount — listes disponibles avant ouverture dialog
+  // Préchargement au mount
   useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
+
+  // Wake-up auto : si listes échouent, ping /health toutes les 5s → retry
+  useEffect(() => {
+    if (!dropdownError || dropdownLoading) return;
+    const API_BASE   = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+    const HEALTH_URL = API_BASE.replace("/api/v1", "") + "/health";
+    setDropdownWaking(true);
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+    const ping = async () => {
+      try {
+        const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(4000) });
+        if (!cancelled && res.ok) { setDropdownWaking(false); loadDropdowns(); return; }
+      } catch { /* encore endormi */ }
+      if (!cancelled) timerId = setTimeout(ping, 5000);
+    };
+    timerId = setTimeout(ping, 3000);
+    return () => { cancelled = true; clearTimeout(timerId); setDropdownWaking(false); };
+  }, [dropdownError, dropdownLoading, loadDropdowns]);
 
   const openCreate = () => {
     setFormError(null);
@@ -585,6 +616,7 @@ export default function ExamRequestsPage() {
           userId={user?.id ?? ""}
           dropdownLoading={dropdownLoading}
           dropdownError={dropdownError}
+          dropdownWaking={dropdownWaking}
           onRetryDropdowns={loadDropdowns}
           onSubmit={handleCreate}
         />
