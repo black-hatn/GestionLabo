@@ -7,6 +7,8 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import invoiceService, { type Invoice as InvoiceAPI } from "@/services/api/invoice";
 import patientService, { type Patient as PatientAPI } from "@/services/api/patient";
+import paymentService from "@/services/api/payment";
+import type { PaymentForPDF } from "@/lib/pdf/invoice-pdf";
 import { toast } from "@/lib/toast-store";
 import {
   Plus, Search, Edit2, Trash2, Loader2, AlertCircle, X,
@@ -64,8 +66,28 @@ function genNum() { return `FAC-${Date.now().toString().slice(-8)}`; }
 
 /* ── Bouton PDF téléchargement ── */
 function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient: Patient | undefined }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [mounted, setMounted]       = useState(false);
+  const [payments, setPayments]     = useState<PaymentForPDF[]>([]);
+  const [fetchingPay, setFetchingPay] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Charge les paiements liés à cette facture au montage
+  useEffect(() => {
+    if (!mounted) return;
+    setFetchingPay(true);
+    paymentService.getPaymentsByInvoice(invoice.id)
+      .then(items => setPayments(items.map(p => ({
+        id: p.id,
+        amount: parseFloat(String(p.amount)),
+        method: p.method,
+        reference: p.reference,
+        paid_at: p.paid_at,
+      }))))
+      .catch(() => {/* silent — PDF still generated without payments */})
+      .finally(() => setFetchingPay(false));
+  }, [mounted, invoice.id]);
+
   if (!mounted) return null;
 
   const invoiceData: InvoiceForPDF = {
@@ -100,16 +122,16 @@ function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient
 
   return (
     <PDFDownloadLink
-      document={<InvoiceDocument invoice={invoiceData} patient={patientData} payments={[]} />}
+      document={<InvoiceDocument invoice={invoiceData} patient={patientData} payments={payments} />}
       fileName={filename}
     >
       {({ loading }: { loading: boolean }) => (
         <button
           title="Télécharger PDF"
-          disabled={loading}
+          disabled={loading || fetchingPay}
           className="p-2 border-2 border-purple-500/30 text-purple-400 bg-transparent hover:bg-purple-500/10 hover:border-purple-500 transition-all disabled:opacity-40 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {(loading || fetchingPay) ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
         </button>
       )}
     </PDFDownloadLink>

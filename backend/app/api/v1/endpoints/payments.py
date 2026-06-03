@@ -19,14 +19,17 @@ def list_payments(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    invoice_id: str = Query(None),
 ):
     query = select(Payment).order_by(Payment.paid_at.desc())
+    count_query = select(func.count()).select_from(Payment)
 
-    # Get total count
-    total = db.scalar(select(func.count()).select_from(Payment))
-    pages = (total + limit - 1) // limit
+    if invoice_id:
+        query = query.where(Payment.invoice_id == invoice_id)
+        count_query = count_query.where(Payment.invoice_id == invoice_id)
 
-    # Get paginated results
+    total = db.scalar(count_query)
+    pages = max(1, (total + limit - 1) // limit)
     offset = (page - 1) * limit
     items = db.execute(query.offset(offset).limit(limit)).scalars().all()
 

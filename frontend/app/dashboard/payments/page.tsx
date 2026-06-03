@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 /* ── Types ── */
-type PaymentMethod = "CARTE" | "ESPECES" | "CHEQUE" | "VIREMENT";
+type PaymentMethod = "CARTE" | "ESPECES" | "CHEQUE" | "VIREMENT" | "MOBILE";
 type Payment = PaymentAPI;
 type Invoice = InvoiceAPI;
 
@@ -24,6 +24,11 @@ const METHOD_CONFIG: Record<PaymentMethod, { label: string; color: string; icon:
   ESPECES:  { label: "Espèces",        color: "text-emerald-400 bg-emerald-500/15 border-emerald-500/25",  icon: Banknote },
   CHEQUE:   { label: "Chèque",         color: "text-amber-400 bg-amber-500/15 border-amber-500/25",        icon: FileText },
   VIREMENT: { label: "Virement",       color: "text-purple-400 bg-purple-500/15 border-purple-500/25",     icon: TrendingUp },
+  MOBILE:   { label: "Mobile Money",   color: "text-pink-400 bg-pink-500/15 border-pink-500/25",           icon: Banknote },
+};
+
+const CURRENCY_SYMBOL: Record<string, string> = {
+  XOF: "FCFA", EUR: "€", USD: "$",
 };
 
 function fmt(d: string) {
@@ -138,7 +143,9 @@ function CreateModal({
             </div>
             {/* Montant */}
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">Montant (€) *</label>
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                Montant ({CURRENCY_SYMBOL[selectedInvoice?.currency ?? "XOF"] ?? "FCFA"}) *
+              </label>
               <input
                 type="number" step="0.01" min="0.01" value={form.amount}
                 onChange={e => setForm({ ...form, amount: e.target.value })}
@@ -266,6 +273,7 @@ export default function PaymentsPage() {
     ESPECES:  payments.filter(p => p.method === "ESPECES").length,
     CHEQUE:   payments.filter(p => p.method === "CHEQUE").length,
     VIREMENT: payments.filter(p => p.method === "VIREMENT").length,
+    MOBILE:   payments.filter(p => p.method === "MOBILE").length,
   };
 
   return (
@@ -306,7 +314,7 @@ export default function PaymentsPage() {
 
           {/* Stats par méthode */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {(["CARTE", "ESPECES", "CHEQUE", "VIREMENT"] as PaymentMethod[]).map(m => {
+            {(["CARTE", "ESPECES", "MOBILE", "VIREMENT"] as PaymentMethod[]).map(m => {
               const cfg = METHOD_CONFIG[m];
               const Icon = cfg.icon;
               return (
@@ -336,7 +344,7 @@ export default function PaymentsPage() {
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {(["ALL", "CARTE", "ESPECES", "CHEQUE", "VIREMENT"] as const).map(m => (
+              {(["ALL", "CARTE", "ESPECES", "MOBILE", "CHEQUE", "VIREMENT"] as const).map(m => (
                 <button key={m} onClick={() => setFilterMethod(m)}
                   className={`px-3 py-1.5 text-xs font-semibold border-2 transition-all ${
                     filterMethod === m

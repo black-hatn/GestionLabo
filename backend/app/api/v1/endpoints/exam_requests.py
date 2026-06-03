@@ -36,15 +36,27 @@ def list_exam_requests(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100),
+    search: str = Query("", min_length=0),
     current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
-    total = db.query(func.count(ExamRequest.id)).scalar()
+    from sqlalchemy import or_
+    q = db.query(ExamRequest)
+    if search:
+        q = (
+            q.join(Patient, Patient.id == ExamRequest.patient_id)
+             .join(Exam, Exam.id == ExamRequest.exam_id)
+             .filter(or_(
+                 Patient.first_name.ilike(f"%{search}%"),
+                 Patient.last_name.ilike(f"%{search}%"),
+                 Exam.name.ilike(f"%{search}%"),
+             ))
+        )
+    total = q.with_entities(func.count(ExamRequest.id)).scalar()
     items = (
-        db.query(ExamRequest)
-        .order_by(ExamRequest.requested_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
+        q.order_by(ExamRequest.requested_at.desc())
+         .offset((page - 1) * limit)
+         .limit(limit)
+         .all()
     )
     return {
         "items": [_enrich(db, er) for er in items],

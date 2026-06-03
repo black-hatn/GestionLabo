@@ -249,6 +249,7 @@ export default function ExamRequestsPage() {
 
   const [page, setPage]             = useState(1);
   const [search, setSearch]         = useState("");
+  const [debouncedSearch, setDebounced] = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | ExamRequestStatus>("ALL");
 
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
@@ -257,8 +258,14 @@ export default function ExamRequestsPage() {
   const [patientOptions, setPatientOptions] = useState<{ id: string; label: string }[]>([]);
   const [examOptions, setExamOptions]       = useState<{ id: string; label: string }[]>([]);
 
+  // Debounce search
+  useEffect(() => {
+    const id = setTimeout(() => { setDebounced(search); setPage(1); }, 400);
+    return () => clearTimeout(id);
+  }, [search]);
+
   // ── React Query hooks ───────────────────────────────────────────────────
-  const { data, isLoading, isFetching, isError, error, refetch } = useExamRequests(page, 10);
+  const { data, isLoading, isFetching, isError, error, refetch } = useExamRequests(page, 10, debouncedSearch);
   const createExamRequest      = useCreateExamRequest();
   const updateExamRequestStatus = useUpdateExamRequestStatus();
   const deleteExamRequest      = useDeleteExamRequest();
@@ -320,15 +327,10 @@ export default function ExamRequestsPage() {
 
   const saving = createExamRequest.isPending || updateExamRequestStatus.isPending || deleteExamRequest.isPending;
 
-  const filtered = requests.filter(r => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      (r.patient_name ?? "").toLowerCase().includes(q) ||
-      (r.exam_name ?? "").toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q);
-    const matchStatus = filterStatus === "ALL" || r.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+  // Search handled server-side; only status filter is client-side (instant, no extra request)
+  const filtered = requests.filter(r =>
+    filterStatus === "ALL" || r.status === filterStatus
+  );
 
   const stats = {
     total,

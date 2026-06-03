@@ -261,9 +261,16 @@ type ModalState =
   | { type: "delete"; patient: Patient };
 
 export default function PatientsPage() {
-  const [page, setPage]         = useState(1);
-  const [search, setSearch]     = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [page, setPage]             = useState(1);
+  const [search, setSearch]         = useState("");
+  const [debouncedSearch, setDebounced] = useState("");
+  const [viewMode, setViewMode]     = useState<"grid" | "table">("grid");
+
+  // Debounce search → reset page on new query
+  useEffect(() => {
+    const id = setTimeout(() => { setDebounced(search); setPage(1); }, 400);
+    return () => clearTimeout(id);
+  }, [search]);
 
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
@@ -274,7 +281,7 @@ export default function PatientsPage() {
   const canDelete = user?.role === "ADMIN";
 
   // ── React Query hooks ───────────────────────────────────────────────────
-  const { data, isLoading, isFetching, isError, error, refetch } = usePatients(page, 12);
+  const { data, isLoading, isFetching, isError, error, refetch } = usePatients(page, 12, debouncedSearch);
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
   const deletePatient = useDeletePatient();

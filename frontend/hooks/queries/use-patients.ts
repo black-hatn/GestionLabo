@@ -7,13 +7,13 @@ import patientService from "@/services/api/patient";
 
 export const PATIENTS_KEY = "patients";
 
-/** Liste paginée des patients */
-export function usePatients(page = 1, limit = 10) {
+/** Liste paginée des patients avec recherche serveur */
+export function usePatients(page = 1, limit = 10, search = "") {
   return useQuery({
-    queryKey: [PATIENTS_KEY, page, limit],
-    queryFn: () => patientService.getPatients(page, limit),
-    staleTime: 30_000,       // 30 secondes avant de considérer les données obsolètes
-    placeholderData: (prev) => prev,  // garde les données précédentes pendant le chargement
+    queryKey: [PATIENTS_KEY, page, limit, search],
+    queryFn: () => patientService.getPatients(page, limit, search),
+    staleTime: 30_000,
+    placeholderData: (prev) => prev,
   });
 }
 

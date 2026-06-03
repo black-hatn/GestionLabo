@@ -38,8 +38,10 @@ export interface ExamRequestCreatePayload {
 }
 
 const examRequestService = {
-  async getExamRequests(page = 1, limit = 10): Promise<ExamRequestsResponse> {
-    const res = await apiClient.get<ExamRequestsResponse>('/demandes-examen', { params: { page, limit } });
+  async getExamRequests(page = 1, limit = 10, search = ""): Promise<ExamRequestsResponse> {
+    const res = await apiClient.get<ExamRequestsResponse>('/demandes-examen', {
+      params: { page, limit, ...(search ? { search } : {}) },
+    });
     return res.data;
   },
 

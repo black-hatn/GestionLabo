@@ -20,11 +20,18 @@ export interface PaymentsResponse {
 }
 
 const paymentService = {
-  async getPayments(page: number = 1, limit: number = 10): Promise<PaymentsResponse> {
+  async getPayments(page: number = 1, limit: number = 10, invoice_id?: string): Promise<PaymentsResponse> {
     const response = await apiClient.get<PaymentsResponse>('/paiements', {
-      params: { page, limit }
+      params: { page, limit, ...(invoice_id ? { invoice_id } : {}) },
     });
     return response.data;
+  },
+
+  async getPaymentsByInvoice(invoice_id: string): Promise<Payment[]> {
+    const response = await apiClient.get<PaymentsResponse>('/paiements', {
+      params: { page: 1, limit: 100, invoice_id },
+    });
+    return response.data.items ?? [];
   },
 
   async getPayment(id: string): Promise<Payment> {

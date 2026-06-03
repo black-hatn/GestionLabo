@@ -9,10 +9,10 @@ import examRequestService, {
 
 export const EXAM_REQUESTS_KEY = "exam-requests";
 
-export function useExamRequests(page = 1, limit = 10) {
+export function useExamRequests(page = 1, limit = 10, search = "") {
   return useQuery({
-    queryKey: [EXAM_REQUESTS_KEY, page, limit],
-    queryFn: () => examRequestService.getExamRequests(page, limit),
+    queryKey: [EXAM_REQUESTS_KEY, page, limit, search],
+    queryFn: () => examRequestService.getExamRequests(page, limit, search),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });
