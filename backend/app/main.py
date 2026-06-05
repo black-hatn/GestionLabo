@@ -33,13 +33,36 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
+
+@app.on_event("startup")
+def migrate_legacy_roles():
+    """Corrige les rôles 'USER' hérités (valeur obsolète) en 'DOCTOR' pour éviter LookupError."""
+    try:
+        from sqlalchemy import text
+        from app.config.database import SessionLocal
+        with SessionLocal() as db:
+            result = db.execute(
+                text("UPDATE users SET role='DOCTOR' WHERE role='USER'")
+            )
+            if result.rowcount:
+                db.commit()
+                logger.info(
+                    "[STARTUP] %d utilisateur(s) avec rôle 'USER' migré(s) vers 'DOCTOR'",
+                    result.rowcount
+                )
+    except Exception as exc:
+        logger.warning("[STARTUP] Migration rôles échouée (non bloquante): %s", exc)
+
+
 @app.get("/")
 def root():
     return {"message": "Bienvenue à l'API Laboratoire Examens", "docs": "/docs", "redoc": "/redoc"}
 
+
 @app.get("/health")
 def health():
     return {"status": "OK"}
+
 
 if __name__ == "__main__":
     import uvicorn
