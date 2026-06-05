@@ -11,7 +11,10 @@ from app.models.payment import Payment
 from app.models.user import UserRole
 from app.schemas.domain import PaymentCreate, PaymentRead, PaginatedPaymentResponse
 
-router = APIRouter(dependencies=[Depends(require_roles(UserRole.ADMIN))])
+# ADMIN et RECEPTIONIST peuvent lire et enregistrer des paiements
+READ_WRITE_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
+
+router = APIRouter()
 
 
 @router.get("", response_model=PaginatedPaymentResponse)
@@ -20,6 +23,7 @@ def list_payments(
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=500),
     invoice_id: str = Query(None),
+    _: None = Depends(require_roles(*READ_WRITE_ROLES)),
 ):
     query = select(Payment).order_by(Payment.paid_at.desc())
     count_query = select(func.count()).select_from(Payment)
@@ -43,7 +47,11 @@ def list_payments(
 
 
 @router.post("", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
-def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
+def create_payment(
+    payload: PaymentCreate,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_roles(*READ_WRITE_ROLES)),
+):
     # Vérification montant positif
     if payload.amount <= 0:
         raise HTTPException(

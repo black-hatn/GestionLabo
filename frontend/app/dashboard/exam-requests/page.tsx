@@ -56,7 +56,7 @@ interface CreateFormProps {
   onSubmit: (data: { patient_id: string; doctor_id: string; exam_id: string; sample_type: string; clinical_info?: string }) => void;
 }
 
-const SELECT_CLS = "w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200 bg-white border-slate-200 text-slate-800";
+const SELECT_CLS = "w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 dark:bg-[#0c1828] dark:border-white/[0.08] dark:text-white bg-white border-slate-200 text-slate-900";
 
 function CreateExamRequestDialog({ open, onClose, saving, error, patients, exams, userId, dropdownLoading, dropdownError, dropdownWaking, onRetryDropdowns, onSubmit }: CreateFormProps) {
   const [patientId, setPatientId]   = useState("");

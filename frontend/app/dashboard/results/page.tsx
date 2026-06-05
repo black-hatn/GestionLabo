@@ -139,7 +139,7 @@ function ResultFormDialog({
                   value={examRequestId}
                   onChange={e => setExamRequestId(e.target.value)}
                   className="w-full h-10 rounded-xl border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40
-                    dark:bg-white/[0.03] dark:border-white/[0.08] dark:text-slate-200
+                    dark:bg-[#0c1828] dark:border-white/[0.08] dark:text-white
                     bg-white border-slate-200 text-slate-800"
                 >
                   <option value="">— Sélectionner une demande —</option>
