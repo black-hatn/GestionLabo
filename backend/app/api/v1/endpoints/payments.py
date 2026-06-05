@@ -28,7 +28,7 @@ def list_payments(
         query = query.where(Payment.invoice_id == invoice_id)
         count_query = count_query.where(Payment.invoice_id == invoice_id)
 
-    total = db.scalar(count_query)
+    total = db.scalar(count_query) or 0
     pages = max(1, (total + limit - 1) // limit)
     offset = (page - 1) * limit
     items = db.execute(query.offset(offset).limit(limit)).scalars().all()

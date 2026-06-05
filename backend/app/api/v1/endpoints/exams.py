@@ -24,7 +24,7 @@ def list_exams(
     query = select(Exam).order_by(Exam.created_at.desc())
 
     # Get total count
-    total = db.scalar(select(func.count()).select_from(Exam))
+    total = db.scalar(select(func.count()).select_from(Exam)) or 0
     pages = (total + limit - 1) // limit
 
     # Get paginated results

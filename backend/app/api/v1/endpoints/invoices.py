@@ -61,7 +61,7 @@ def list_invoices(
 
     query = query.order_by(Invoice.created_at.desc())
 
-    total = db.scalar(count_query)
+    total = db.scalar(count_query) or 0
     pages = (total + limit - 1) // limit
 
     # Get paginated results

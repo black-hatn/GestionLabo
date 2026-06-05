@@ -56,7 +56,7 @@ def list_patients(
                 Patient.phone.ilike(f"%{search}%"),
             )
         )
-    total = db.scalar(count_query)
+    total = db.scalar(count_query) or 0
     pages = (total + limit - 1) // limit
     offset = (page - 1) * limit
     patients = db.execute(query.offset(offset).limit(limit)).scalars().all()
