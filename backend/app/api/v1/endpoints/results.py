@@ -90,13 +90,18 @@ def notify_patient(
     exam = db.query(Exam).filter(Exam.id == er.exam_id).first()
     exam_type = exam.name if exam else "Analyse"
 
-    # Map result status to the email service expected values
+    # Map result status to email service expected values
     status_val = result.status
     if hasattr(status_val, "value"):
         status_val = status_val.value
 
-    # Always send using CRITIQUE path for critical, TERMINE for everything else
-    email_status = "CRITIQUE" if status_val == "CRITIQUE" else "TERMINE"
+    # CRITIQUE → email CRITIQUE, ANORMAL → email ANORMAL, NORMAL → pas d'email
+    if status_val == "CRITIQUE":
+        email_status = "CRITIQUE"
+    elif status_val == "ANORMAL":
+        email_status = "ANORMAL"
+    else:
+        return {"message": "Aucune notification requise pour un résultat normal"}
 
     sent = send_result_notification(
         patient_email=patient.email,

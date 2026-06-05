@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { InvoiceForPDF, PatientForPDF } from "@/lib/pdf/invoice-pdf";
 import { InvoiceDocument } from "@/lib/pdf/invoice-pdf";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 
 /* ── Chargement dynamique PDFDownloadLink (pas de SSR pour @react-pdf/renderer) ── */
 const PDFDownloadLink = dynamic(
@@ -46,11 +47,11 @@ const CURRENCY_CONFIG: Record<Currency, { label: string; symbol: string; flag: s
 };
 
 const PAYMENT_TYPES = [
-  { value: "ESPECES",   label: "💵 Espèces" },
-  { value: "CARTE",     label: "💳 Carte bancaire" },
-  { value: "VIREMENT",  label: "🏦 Virement bancaire" },
-  { value: "MOBILE",    label: "📱 Mobile Money" },
-  { value: "CHEQUE",    label: "📄 Chèque" },
+  { value: "CASH",          label: "💵 Espèces" },
+  { value: "CARD",          label: "💳 Carte bancaire" },
+  { value: "BANK_TRANSFER", label: "🏦 Virement bancaire" },
+  { value: "MOBILE_MONEY",  label: "📱 Mobile Money" },
+  { value: "CHEQUE",        label: "📄 Chèque" },
 ];
 
 function fmt(d: string) {
@@ -69,24 +70,28 @@ function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient
   const [mounted, setMounted]       = useState(false);
   const [payments, setPayments]     = useState<PaymentForPDF[]>([]);
   const [fetchingPay, setFetchingPay] = useState(false);
+  const [ready, setReady]           = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // Charge les paiements liés à cette facture au montage
-  useEffect(() => {
-    if (!mounted) return;
+  const handleClick = async () => {
+    if (ready) return; // paiements déjà chargés, PDFDownloadLink prend la main
     setFetchingPay(true);
-    paymentService.getPaymentsByInvoice(invoice.id)
-      .then(items => setPayments(items.map(p => ({
+    try {
+      const items = await paymentService.getPaymentsByInvoice(invoice.id);
+      setPayments(items.map(p => ({
         id: p.id,
         amount: parseFloat(String(p.amount)),
         method: p.method,
         reference: p.reference,
         paid_at: p.paid_at,
-      }))))
-      .catch(() => {/* silent — PDF still generated without payments */})
-      .finally(() => setFetchingPay(false));
-  }, [mounted, invoice.id]);
+      })));
+    } catch { /* silent — PDF généré sans paiements */ }
+    finally {
+      setFetchingPay(false);
+      setReady(true);
+    }
+  };
 
   if (!mounted) return null;
 
@@ -120,6 +125,19 @@ function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient
 
   const filename = `Facture-${invoice.invoice_number}-${patientData.last_name}.pdf`;
 
+  if (!ready) {
+    return (
+      <button
+        title="Télécharger PDF"
+        disabled={fetchingPay}
+        onClick={handleClick}
+        className="p-2 border-2 border-purple-500/30 text-purple-400 bg-transparent hover:bg-purple-500/10 hover:border-purple-500 transition-all disabled:opacity-40 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20"
+      >
+        {fetchingPay ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+      </button>
+    );
+  }
+
   return (
     <PDFDownloadLink
       document={<InvoiceDocument invoice={invoiceData} patient={patientData} payments={payments} />}
@@ -128,10 +146,10 @@ function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient
       {({ loading }: { loading: boolean }) => (
         <button
           title="Télécharger PDF"
-          disabled={loading || fetchingPay}
+          disabled={loading}
           className="p-2 border-2 border-purple-500/30 text-purple-400 bg-transparent hover:bg-purple-500/10 hover:border-purple-500 transition-all disabled:opacity-40 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20"
         >
-          {(loading || fetchingPay) ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
         </button>
       )}
     </PDFDownloadLink>
@@ -469,6 +487,7 @@ export default function InvoicesPage() {
   const [search, setSearch]           = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | InvoiceStatus>("ALL");
   const [modal, setModal]             = useState<"none" | "create" | { type: "edit"; inv: Invoice }>("none");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; invoice: Invoice | null; saving: boolean }>({ open: false, invoice: null, saving: false });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -490,13 +509,22 @@ export default function InvoicesPage() {
       .catch(() => toast.error("Impossible de charger la liste des patients"));
   }, []);
 
-  const handleDelete = async (inv: Invoice) => {
-    if (!confirm(`Supprimer la facture ${inv.invoice_number} ?`)) return;
+  const handleDelete = (inv: Invoice) => {
+    setDeleteConfirm({ open: true, invoice: inv, saving: false });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.invoice) return;
+    setDeleteConfirm(d => ({ ...d, saving: true }));
     try {
-      await invoiceService.deleteInvoice(inv.id);
+      await invoiceService.deleteInvoice(deleteConfirm.invoice.id);
       toast.success("Facture supprimée");
+      setDeleteConfirm({ open: false, invoice: null, saving: false });
       load();
-    } catch { toast.error("Impossible de supprimer"); }
+    } catch {
+      toast.error("Impossible de supprimer");
+      setDeleteConfirm(d => ({ ...d, saving: false }));
+    }
   };
 
   const pname = (id: string) => {
@@ -725,6 +753,14 @@ export default function InvoicesPage() {
         {typeof modal === "object" && modal.type === "edit" && (
           <EditStatusModal invoice={modal.inv} onClose={() => setModal("none")} onSave={load} />
         )}
+        <DeleteConfirmDialog
+          open={deleteConfirm.open}
+          itemName={deleteConfirm.invoice ? `Facture ${deleteConfirm.invoice.invoice_number}` : ""}
+          itemType="cette facture"
+          saving={deleteConfirm.saving}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteConfirm({ open: false, invoice: null, saving: false })}
+        />
       </RoleGuard>
     </ProtectedRoute>
   );

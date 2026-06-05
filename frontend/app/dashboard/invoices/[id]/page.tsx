@@ -11,15 +11,24 @@ import { Patient } from "@/services/api/patient";
 import { Payment } from "@/services/api/payment";
 import {
   ArrowLeft,
-  FileDown,
   CheckCircle,
   Activity,
   Calendar,
   User,
   Coins,
   AlertCircle,
+  Loader2,
+  FileText,
 } from "lucide-react";
 import { formatDate, formatPrice } from "@/lib/utils";
+import dynamic from "next/dynamic";
+import type { InvoiceForPDF, PatientForPDF, PaymentForPDF } from "@/lib/pdf/invoice-pdf";
+import { InvoiceDocument } from "@/lib/pdf/invoice-pdf";
+
+const PDFDownloadLink = dynamic(
+  () => import("@react-pdf/renderer").then(mod => mod.PDFDownloadLink),
+  { ssr: false }
+);
 
 /* ─ Status helpers ─────────────────────────────────────────────────── */
 function getStatusColors(status: string) {
@@ -133,9 +142,7 @@ export default function InvoiceDetailPage() {
     );
   }
 
-  const subtotal = invoice.total_amount / 1.1;
-  const taxes    = invoice.total_amount - subtotal;
-  const dues     = invoice.total_amount - invoice.paid_amount;
+  const dues = invoice.total_amount - invoice.paid_amount;
 
   const patientInitials = patient
     ? `${patient.first_name[0] ?? ""}${patient.last_name[0] ?? ""}`.toUpperCase()
@@ -169,13 +176,58 @@ export default function InvoiceDetailPage() {
                 {paying ? "Traitement..." : "Solder"}
               </button>
             )}
-            <button
-              onClick={() => toast.success("Téléchargement du PDF démarré...")}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-300 border border-white/[0.08] hover:bg-white/[0.04] hover:text-white transition-all"
+            <PDFDownloadLink
+              document={
+                <InvoiceDocument
+                  invoice={{
+                    id: invoice.id,
+                    invoice_number: invoice.invoice_number,
+                    total_amount: parseFloat(String(invoice.total_amount)),
+                    paid_amount: parseFloat(String(invoice.paid_amount)),
+                    status: invoice.status,
+                    issue_date: invoice.issue_date,
+                    due_date: invoice.due_date,
+                    paid_date: invoice.paid_date ?? undefined,
+                  } as InvoiceForPDF}
+                  patient={
+                    patient
+                      ? {
+                          first_name: patient.first_name,
+                          last_name: patient.last_name,
+                          email: patient.email ?? "",
+                          phone: patient.phone ?? "",
+                          city: patient.city ?? "",
+                          record_number: patient.record_number,
+                        } as PatientForPDF
+                      : {
+                          first_name: "Patient",
+                          last_name: invoice.patient_id.slice(0, 8),
+                          email: "",
+                          phone: "",
+                          city: "",
+                        } as PatientForPDF
+                  }
+                  payments={payments.map(p => ({
+                    id: p.id,
+                    amount: parseFloat(String(p.amount)),
+                    method: p.method,
+                    reference: p.reference,
+                    paid_at: p.paid_at,
+                  }) as PaymentForPDF)}
+                />
+              }
+              fileName={`Facture-${invoice.invoice_number}-${patient?.last_name ?? invoice.patient_id.slice(0, 8)}.pdf`}
             >
-              <FileDown className="w-4 h-4" />
-              Télécharger PDF
-            </button>
+              {({ loading: pdfLoading }: { loading: boolean }) => (
+                <button
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-300 border border-white/[0.08] hover:bg-white/[0.04] hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                  Télécharger PDF
+                </button>
+              )}
+            </PDFDownloadLink>
           </div>
         </div>
 
@@ -292,7 +344,7 @@ export default function InvoiceDetailPage() {
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-bold text-slate-200">1. Prestations d&apos;Analyses Cliniques</span>
                 <div className="flex-1 border-b border-dotted border-white/[0.08]" />
-                <span className="font-bold text-white">{formatPrice(subtotal)}</span>
+                <span className="font-bold text-white">{formatPrice(invoice.total_amount)}</span>
               </div>
               <p className="text-xs text-slate-500 italic pl-4">
                 Dosages, Hématologie, Prélèvements veineux, traitement et diagnostics automatisés
@@ -314,28 +366,20 @@ export default function InvoiceDetailPage() {
                 Notes &amp; Informations Légales
               </span>
               <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-                TVA acquittée sur les encaissements. Les examens biologiques sont exonérés selon
-                l&apos;art. 261‑4‑1° du CGI. En cas de retard de paiement, une pénalité
-                forfaitaire de 40 € est exigible de plein droit.
+                Les examens biologiques sont exonérés de TVA. Le montant affiché est le total TTC.
+                En cas de retard de paiement, des pénalités peuvent être appliquées conformément
+                à la réglementation en vigueur.
               </p>
             </div>
 
             {/* Price breakdown */}
             <div className="flex flex-col gap-3 w-full sm:w-64 text-sm">
-              <div className="flex justify-between text-slate-400 font-semibold">
-                <span>Sous-total HT :</span>
-                <span className="text-slate-200 font-bold">{formatPrice(subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-slate-400 font-semibold">
-                <span>TVA (10 %) :</span>
-                <span className="text-slate-200 font-bold">{formatPrice(taxes)}</span>
-              </div>
               <div
                 className="flex justify-between font-extrabold text-white border-t pt-3"
                 style={{ borderColor: "rgba(255,255,255,0.08)" }}
               >
-                <span>NET À PAYER :</span>
-                <span className="text-emerald-400 text-base">{formatPrice(invoice.total_amount)}</span>
+                <span>TOTAL TTC :</span>
+                <span className="text-emerald-400 text-base">{formatPrice(invoice.total_amount)} FCFA</span>
               </div>
               <div
                 className="flex justify-between font-semibold text-xs border-t pt-3"

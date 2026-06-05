@@ -185,6 +185,8 @@ export default function DashboardPage() {
 
   useEffect(() => { if (isValidRole) loadStats(); }, [isValidRole, loadStats]);
 
+  const { openDialog, openSchedule, openReport, closeDialog } = useDashboardActions();
+
   /* ── Wake-up automatique ────────────────────────────────────────────────
    * Quand les stats échouent (serveur Render endormi), on ping /health
    * toutes les 5s. Dès qu'il répond OK, on recharge les stats. */
@@ -252,9 +254,6 @@ export default function DashboardPage() {
     ];
   })();
 
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  const { openDialog, openSchedule, openReport, closeDialog } = useDashboardActions();
-
   return (
     <div className="space-y-7 animate-fade-in">
       {/* Dialogs */}
@@ -319,10 +318,8 @@ export default function DashboardPage() {
             <span className="font-bold text-red-300">{critiques} résultat{critiques > 1 ? "s" : ""} critique{critiques > 1 ? "s" : ""}</span>
             <span className="text-red-400/70"> nécessite{critiques > 1 ? "nt" : ""} une attention immédiate</span>
           </div>
-          <Link href="/dashboard/results">
-            <button className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1">
-              Voir <ChevronRight className="w-3 h-3" />
-            </button>
+          <Link href="/dashboard/results" className="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1">
+            Voir <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
       )}

@@ -1,6 +1,9 @@
 import random
 import string
+import logging
 from datetime import datetime, timedelta
+
+_logger = logging.getLogger(__name__)
 
 class TwoFactorService:
     """Service pour gérer l'authentification à deux facteurs"""
@@ -30,7 +33,7 @@ class TwoFactorService:
         """
         sent = send_email(to=email, subject="Code OTP — NovaBio Lab", html_body=html)
         if not sent:
-            print(f"[2FA-FALLBACK] OTP pour {email}: {otp}")  # fallback si SMTP désactivé
+            _logger.debug("[2FA-FALLBACK] OTP généré pour %s (SMTP désactivé)", email)
         return True
     
     @staticmethod

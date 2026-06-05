@@ -8,19 +8,10 @@ from app.api.deps import get_current_user, require_roles
 from app.config.database import get_db
 from app.config.security import hash_password
 from app.models.user import User, UserRole
-from app.schemas.domain import UserRead
+from app.schemas.domain import UserCreate, UserRead
 from app.schemas.common import MessageResponse
 from app.utils.audit_log import AuditLog
-from pydantic import BaseModel, EmailStr
-
-
-class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
-    first_name: str
-    last_name: str
-    role: str = "DOCTOR"
-    is_active: bool = True
+from pydantic import BaseModel
 
 
 class UserUpdate(BaseModel):
@@ -43,25 +34,25 @@ def list_users(
 ):
     """List all users - ADMIN only"""
     query = select(User)
+    count_q = select(func.count()).select_from(User)
     if search:
         from sqlalchemy import or_
-        query = query.where(
-            or_(
-                User.email.ilike(f"%{search}%"),
-                User.first_name.ilike(f"%{search}%"),
-                User.last_name.ilike(f"%{search}%"),
-            )
+        search_filter = or_(
+            User.email.ilike(f"%{search}%"),
+            User.first_name.ilike(f"%{search}%"),
+            User.last_name.ilike(f"%{search}%"),
         )
+        query = query.where(search_filter)
+        count_q = count_q.where(search_filter)
     query = query.order_by(User.created_at.desc())
 
-    count_q = select(func.count()).select_from(User)
     total = db.scalar(count_q) or 0
     pages = (total + limit - 1) // limit
 
     offset = (page - 1) * limit
     items = db.execute(query.offset(offset).limit(limit)).scalars().all()
 
-    AuditLog.log_action(current_user.id, "LIST_USERS", "user", "")
+    AuditLog.log_action(db, current_user.id, "LIST_USERS", "user", "")
     return {
         "items": [UserRead.model_validate(u) for u in items],
         "total": total,
@@ -96,24 +87,20 @@ def create_user(
     if existing:
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    valid_roles = [r.value for r in UserRole]
-    if payload.role not in valid_roles:
-        raise HTTPException(status_code=400, detail=f"Invalid role. Must be one of: {valid_roles}")
-
     user = User(
         id=str(uuid.uuid4()),
         email=payload.email,
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
-        role=UserRole(payload.role),
-        is_active=payload.is_active,
+        role=payload.role,
+        is_active=True,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
-    AuditLog.log_action(current_user.id, "CREATE_USER", "user", user.id, {"email": user.email})
+    AuditLog.log_action(db, current_user.id, "CREATE_USER", "user", user.id, details={"email": user.email})
     return user
 
 
@@ -144,7 +131,7 @@ def update_user(
     db.commit()
     db.refresh(user)
 
-    AuditLog.log_action(current_user.id, "UPDATE_USER", "user", user_id)
+    AuditLog.log_action(db, current_user.id, "UPDATE_USER", "user", user_id)
     return user
 
 
@@ -168,7 +155,7 @@ def delete_user(
     db.delete(user)
     db.commit()
 
-    AuditLog.log_action(current_user.id, "DELETE_USER", "user", user_id, {"email": user.email})
+    AuditLog.log_action(db, current_user.id, "DELETE_USER", "user", user_id, details={"email": user.email})
     return MessageResponse(message="User deleted successfully")
 
 
@@ -190,5 +177,5 @@ def toggle_user_active(
     db.commit()
     db.refresh(user)
 
-    AuditLog.log_action(current_user.id, "TOGGLE_USER_ACTIVE", "user", user_id, {"is_active": user.is_active})
+    AuditLog.log_action(db, current_user.id, "TOGGLE_USER_ACTIVE", "user", user_id, details={"is_active": user.is_active})
     return user

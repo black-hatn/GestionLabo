@@ -48,8 +48,10 @@ export interface ResultUpdatePayload {
 }
 
 const resultService = {
-  async getResults(page = 1, limit = 10): Promise<ResultsResponse> {
-    const res = await apiClient.get<ResultsResponse>('/resultats/', { params: { page, limit } });
+  async getResults(page = 1, limit = 10, status?: ResultStatus): Promise<ResultsResponse> {
+    const params: Record<string, string | number> = { page, limit };
+    if (status) params.status = status;
+    const res = await apiClient.get<ResultsResponse>('/resultats/', { params });
     return res.data;
   },
 

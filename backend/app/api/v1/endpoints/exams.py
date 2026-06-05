@@ -37,7 +37,7 @@ def list_exams(
         "limit": limit,
         "pages": pages,
     }
-    AuditLog.log_action(current_user.id, "LIST_EXAMS", "exam", "")
+    AuditLog.log_action(db, current_user.id, "LIST_EXAMS", "exam", "")
 
     return result
 
@@ -48,7 +48,7 @@ def get_exam(exam_id: str, db: Session = Depends(get_db), current_user: User = D
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
     
-    AuditLog.log_action(current_user.id, "GET_EXAM", "exam", exam_id)
+    AuditLog.log_action(db, current_user.id, "GET_EXAM", "exam", exam_id)
     return exam
 
 @router.post("", response_model=ExamRead, status_code=status.HTTP_201_CREATED)
@@ -67,7 +67,7 @@ def create_exam(payload: ExamCreate, db: Session = Depends(get_db), current_user
     db.commit()
     db.refresh(exam)
     
-    AuditLog.log_action(current_user.id, "CREATE_EXAM", "exam", exam.id, f"name={exam.name}")
+    AuditLog.log_action(db, current_user.id, "CREATE_EXAM", "exam", exam.id, details={"name": exam.name})
     return exam
 
 @router.put("/{exam_id}", response_model=ExamRead)
@@ -77,13 +77,13 @@ def update_exam(exam_id: str, payload: ExamUpdate, db: Session = Depends(get_db)
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
     
-    for field, value in payload.dict(exclude_unset=True).items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(exam, field, value)
-    
+
     db.commit()
     db.refresh(exam)
-    
-    AuditLog.log_action(current_user.id, "UPDATE_EXAM", "exam", exam_id)
+
+    AuditLog.log_action(db, current_user.id, "UPDATE_EXAM", "exam", exam_id)
     return exam
 
 @router.delete("/{exam_id}", response_model=MessageResponse)
@@ -96,7 +96,7 @@ def delete_exam(exam_id: str, db: Session = Depends(get_db), current_user: User 
     db.delete(exam)
     db.commit()
 
-    AuditLog.log_action(current_user.id, "DELETE_EXAM", "exam", exam_id)
+    AuditLog.log_action(db, current_user.id, "DELETE_EXAM", "exam", exam_id)
     return MessageResponse(message="Exam deleted successfully")
 
 
@@ -139,6 +139,8 @@ DEFAULT_EXAMS = [
     # Endocrinologie
     {"name": "TSH (Thyréostimuline)",                "unit": "µUI/mL",   "description": "Exploration de la fonction thyroïdienne"},
     {"name": "PSA (Antigène Prostatique Spécifique)","unit": "ng/mL",    "description": "Marqueur du cancer de la prostate"},
+    # Sérologie infectieuse (33ème examen)
+    {"name": "Sérodiagnostic de Widal-Félix",        "unit": "",         "description": "Diagnostic sérologique de la fièvre typhoïde"},
 ]
 
 
@@ -162,5 +164,5 @@ def seed_default_exams(
             ))
             inserted += 1
     db.commit()
-    AuditLog.log_action(current_user.id, "SEED_EXAMS", "exam", "", f"inserted={inserted}")
+    AuditLog.log_action(db, current_user.id, "SEED_EXAMS", "exam", "", details={"inserted": inserted})
     return {"inserted": inserted, "total_defaults": len(DEFAULT_EXAMS)}

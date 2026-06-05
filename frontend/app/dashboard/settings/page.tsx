@@ -23,8 +23,9 @@ const roleLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function SettingsPage() {
-  const currentUser = useAuthStore(state => state.user);
-  const login       = useAuthStore(state => state.login);
+  const currentUser  = useAuthStore(state => state.user);
+  const login        = useAuthStore(state => state.login);
+  const accessToken  = useAuthStore(state => state.accessToken);
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications" | "email">("profile");
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
@@ -114,13 +115,7 @@ export default function SettingsPage() {
         first_name: profile.first_name,
         last_name: profile.last_name,
       });
-      // Refresh stored user data — read token from Zustand persist store
-      let accessToken = "";
-      try {
-        const raw = localStorage.getItem("novabio-auth");
-        if (raw) accessToken = JSON.parse(raw)?.state?.accessToken ?? "";
-      } catch { /* ignore */ }
-      login(accessToken, { ...updated, role: (updated.role as UserRole) });
+      login(accessToken ?? "", { ...updated, role: (updated.role as UserRole) });
       toast.success("Profil mis à jour avec succès !");
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.message || "Erreur lors de la mise à jour";
@@ -502,7 +497,7 @@ export default function SettingsPage() {
               <div className="flex justify-end pt-2">
                 <button
                   type="button"
-                  onClick={() => toast.info("Configuration SMTP active — connexion établie avec smtp.gmail.com:587")}
+                  onClick={() => toast.info("Test SMTP non disponible dans cette version")}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold
                     dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20
                     bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border dark:border-emerald-500/20 border-emerald-200 transition-colors"

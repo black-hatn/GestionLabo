@@ -7,7 +7,7 @@ import { LogOut, Bell, Activity, Zap, AlertTriangle } from "lucide-react";
 import { GlobalSearch } from "@/components/search/global-search";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import resultService, { ResultItem } from "@/services/api/result";
 
@@ -20,6 +20,7 @@ function SystemStatus() {
   useEffect(() => {
     let cancelled = false;
     let timerId: ReturnType<typeof setTimeout>;
+    let retryDelay = 10_000;
 
     const check = async () => {
       try {
@@ -27,15 +28,21 @@ function SystemStatus() {
           signal: AbortSignal.timeout(5000),
         });
         if (!cancelled) {
-          const s = res.ok ? "ok" : "down";
-          setStatus(s);
-          // OK → re-vérif dans 5 min ; down → retry dans 10 s
-          timerId = setTimeout(check, s === "ok" ? 5 * 60 * 1000 : 10_000);
+          if (res.ok) {
+            setStatus("ok");
+            retryDelay = 10_000; // reset backoff
+            timerId = setTimeout(check, 5 * 60 * 1000);
+          } else {
+            setStatus("down");
+            retryDelay = Math.min(retryDelay * 2, 5 * 60 * 1000);
+            timerId = setTimeout(check, retryDelay);
+          }
         }
       } catch {
         if (!cancelled) {
           setStatus("down");
-          timerId = setTimeout(check, 10_000); // retry rapide tant que hors ligne
+          retryDelay = Math.min(retryDelay * 2, 5 * 60 * 1000);
+          timerId = setTimeout(check, retryDelay);
         }
       }
     };
@@ -80,6 +87,7 @@ export function Navbar() {
   const [critiques, setCritiques] = useState<ResultItem[]>([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const lastFetchRef = useRef<number>(0);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -94,6 +102,9 @@ export function Navbar() {
   }, [user?.id]);
 
   const loadCritiques = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < 2 * 60 * 1000) return; // skip si < 2min
+    lastFetchRef.current = now;
     setNotifLoading(true);
     try {
       const data = await resultService.getResults(1, 50);

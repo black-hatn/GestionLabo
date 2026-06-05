@@ -5,17 +5,14 @@ from app.api.v1.router import api_router
 # Import all models so SQLAlchemy registers them before create_all
 from app.models import password_reset_token as _  # noqa: F401
 from app.config.settings import get_settings
+from app.middleware.security import SecurityHeadersMiddleware
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Créer toutes les tables au démarrage
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("✅ Tables créées avec succès")
-except Exception as e:
-    logger.error(f"❌ Erreur création tables: {e}")
+# Schema géré par Alembic — ne pas utiliser create_all en production
+# Base.metadata.create_all(bind=engine)
 
 _settings = get_settings()
 
@@ -25,6 +22,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_settings.CORS_ORIGINS,

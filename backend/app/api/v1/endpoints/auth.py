@@ -8,13 +8,15 @@ import string
 from app.api.deps import get_current_user
 from app.config.database import get_db
 from app.config.security import create_access_token, create_refresh_token, create_token, decode_token, hash_password, verify_password
+from app.config.settings import get_settings
 from app.models.user import User
 from app.models.password_reset_token import PasswordResetToken
 from app.schemas.common import MessageResponse
 from app.schemas.domain import LoginRequest, RefreshRequest, TokenPair, UserCreate, UserRead
 from app.utils.two_factor import TwoFactorService
 from app.utils.audit_log import AuditLog
-from pydantic import BaseModel
+from app.utils.rate_limit import rate_limiter
+from pydantic import BaseModel, Field
 
 class OTPRequest(BaseModel):
     email: str
@@ -23,10 +25,8 @@ class OTPVerification(BaseModel):
     email: str
     otp: str
 
-# In-memory reset tokens: { email: { "code": "123456", "expires": datetime } }
-_reset_tokens: dict = {}
-
 router = APIRouter()
+settings = get_settings()
 
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
@@ -34,6 +34,10 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.scalar(select(User).where(User.email == payload.email))
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+    # Empêcher l'auto-attribution du rôle ADMIN via l'inscription publique
+    role = payload.role
+    if str(role).upper() == "ADMIN":
+        role = "DOCTOR"
     # Generate UUID if not provided
     import uuid
     user = User(
@@ -42,7 +46,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password),
         first_name=payload.first_name,
         last_name=payload.last_name,
-        role=payload.role,
+        role=role,
         is_active=True,
     )
     db.add(user)
@@ -53,8 +57,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/seed", response_model=MessageResponse)
 def seed(db: Session = Depends(get_db)):
-    from app.config.settings import get_settings
-    _s = get_settings()
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(status_code=403, detail="Seed désactivé en production")
+    _s = settings
     existing = db.scalar(select(User).where(User.email == _s.ADMIN_EMAIL))
     if existing:
         return MessageResponse(message="Admin already seeded")
@@ -78,9 +83,13 @@ def seed(db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenPair)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    if not rate_limiter.is_allowed(f"login:{payload.email}", max_requests=5, window=60):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez dans 1 minute.")
     user = db.scalar(select(User).where(User.email == payload.email))
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Compte désactivé. Contactez l'administrateur.")
     return TokenPair(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
@@ -108,18 +117,43 @@ def logout():
     return MessageResponse(message="Logged out")
 
 
+# ── Changement de mot de passe ────────────────────────────────────────────────
+
+class ChangePasswordBody(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
+@router.post("/change-password", response_model=MessageResponse)
+def change_password(
+    body: ChangePasswordBody,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Permet à un utilisateur authentifié de changer son mot de passe."""
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mot de passe actuel incorrect")
+    current_user.password_hash = hash_password(body.new_password)
+    db.commit()
+    AuditLog.log_action(db, current_user.id, "CHANGE_PASSWORD", "auth", current_user.id)
+    return MessageResponse(message="Mot de passe modifié avec succès")
+
+
 @router.post("/2fa/request-otp", response_model=MessageResponse)
 def request_otp(payload: OTPRequest, db: Session = Depends(get_db)):
     """Demande un code OTP pour l'authentification à deux facteurs"""
+    if not rate_limiter.is_allowed(f"otp:{payload.email}", max_requests=3, window=60):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez dans 1 minute.")
     user = db.scalar(select(User).where(User.email == payload.email))
+    # Message générique pour éviter l'énumération des emails
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        return MessageResponse(message="Si cet email existe, un OTP a été envoyé")
 
     otp = TwoFactorService.generate_otp()
     TwoFactorService.send_otp_email(payload.email, otp)
-    AuditLog.log_action(user.id, "REQUEST_OTP", "auth", "otp_request")
+    AuditLog.log_action(db, user.id, "REQUEST_OTP", "auth", "otp_request")
 
-    return MessageResponse(message="OTP envoyé avec succès")
+    return MessageResponse(message="Si cet email existe, un OTP a été envoyé")
 
 
 @router.post("/2fa/verify-otp", response_model=TokenPair)
@@ -130,10 +164,10 @@ def verify_otp(payload: OTPVerification, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
 
     if not TwoFactorService.verify_otp(payload.email, payload.otp):
-        AuditLog.log_action(user.id, "VERIFY_OTP_FAILED", "auth", "otp_verification", status="FAILED")
+        AuditLog.log_action(db, user.id, "VERIFY_OTP_FAILED", "auth", "otp_verification", status="FAILED")
         raise HTTPException(status_code=401, detail="Invalid OTP")
 
-    AuditLog.log_action(user.id, "VERIFY_OTP_SUCCESS", "auth", "otp_verification")
+    AuditLog.log_action(db, user.id, "VERIFY_OTP_SUCCESS", "auth", "otp_verification")
 
     return TokenPair(
         access_token=create_access_token(user.id),
@@ -157,6 +191,8 @@ class PasswordResetConfirmBody(BaseModel):
 
 @router.post("/password-reset-request")
 def password_reset_request(body: PasswordResetRequestBody, db: Session = Depends(get_db)):
+    if not rate_limiter.is_allowed(f"pwreset:{body.email}", max_requests=3, window=300):
+        raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez dans 5 minutes.")
     user = db.scalar(select(User).where(User.email == body.email))
     if user:
         code = "".join(random.choices(string.digits, k=6))

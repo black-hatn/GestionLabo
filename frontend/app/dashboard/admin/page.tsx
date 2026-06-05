@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Shield, Plus, Edit2, Trash2, Lock, Unlock, Loader2, AlertCircle, X, Check, Search, RefreshCw, Eye, EyeOff, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { DeleteConfirmDialog } from "@/components/dashboard/delete-confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +67,7 @@ export default function AdminControlPanel() {
   const [showPassword, setShowPassword] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; user: UserData | null }>({ open: false, user: null });
 
   const loadUsers = useCallback(async () => {
     try {
@@ -139,13 +142,19 @@ export default function AdminControlPanel() {
     }
   };
 
-  const handleDelete = async (user: UserData) => {
+  const handleDelete = (user: UserData) => {
     if (user.id === currentUser?.id) {
       toast.error("Vous ne pouvez pas supprimer votre propre compte");
       return;
     }
-    if (!window.confirm(`Supprimer ${user.first_name} ${user.last_name} ? Cette action est irréversible.`)) return;
+    setDeleteConfirm({ open: true, user });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm.user) return;
+    const user = deleteConfirm.user;
     setDeletingId(user.id);
+    setDeleteConfirm(d => ({ ...d, open: false }));
     try {
       await userService.deleteUser(user.id);
       toast.success("Utilisateur supprimé avec succès");
@@ -155,6 +164,7 @@ export default function AdminControlPanel() {
       toast.error(msg);
     } finally {
       setDeletingId(null);
+      setDeleteConfirm({ open: false, user: null });
     }
   };
 
@@ -187,6 +197,7 @@ export default function AdminControlPanel() {
   };
 
   return (
+    <ProtectedRoute>
     <RoleGuard allowedRoles={["ADMIN"]}>
       <div className="space-y-8 animate-fade-in">
         {/* Header */}
@@ -438,6 +449,15 @@ export default function AdminControlPanel() {
           </CardContent>
         </Card>
       </div>
+      <DeleteConfirmDialog
+        open={deleteConfirm.open}
+        itemName={deleteConfirm.user ? `${deleteConfirm.user.first_name} ${deleteConfirm.user.last_name}` : ""}
+        itemType="cet utilisateur"
+        saving={deletingId !== null}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ open: false, user: null })}
+      />
     </RoleGuard>
+    </ProtectedRoute>
   );
 }

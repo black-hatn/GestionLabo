@@ -363,9 +363,6 @@ export default function ExamRequestsPage() {
     }
   }, []);
 
-  // Préchargement au mount
-  useEffect(() => { loadDropdowns(); }, [loadDropdowns]);
-
   // Wake-up auto : si listes échouent, ping /health toutes les 5s → retry
   useEffect(() => {
     if (!dropdownError || dropdownLoading) return;
@@ -387,8 +384,7 @@ export default function ExamRequestsPage() {
 
   const openCreate = () => {
     setFormError(null);
-    // Recharge si vide (ex: premier échec au mount)
-    if (patientOptions.length === 0 || examOptions.length === 0) loadDropdowns();
+    loadDropdowns();
     setModal({ type: "create" });
   };
   const openView   = (er: ExamRequest) => setModal({ type: "view", er });

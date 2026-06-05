@@ -78,11 +78,14 @@ export default function PatientDetailPage() {
       setAddress(pData.address || "");
       setInsuranceNumber(pData.insurance_number || "");
 
-      // Load patient's exam requests (demandes-examen)
-      // Filter list of exam requests for this patient
-      const allDemandes = await api.list<Demande & { patient_id: string }>("demandes-examen", accessToken);
-      const patientDemandes = allDemandes.filter((d) => d.patient_id === id);
-      setDemandes(patientDemandes);
+      // Load exam requests filtered by patient_id server-side
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+      const resp = await fetch(`${API_BASE}/demandes-examen?patient_id=${id}&page=1&limit=100`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!resp.ok) throw new Error("Erreur chargement demandes");
+      const demandesData = await resp.json();
+      setDemandes(demandesData.items ?? []);
     } catch {
       toast.error("Impossible de charger les détails du patient.");
     } finally {

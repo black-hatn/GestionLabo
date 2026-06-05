@@ -44,7 +44,7 @@ def list_patients(
     pages = (total + limit - 1) // limit
     offset = (page - 1) * limit
     patients = db.execute(query.offset(offset).limit(limit)).scalars().all()
-    AuditLog.log_action(current_user.id, "LIST_PATIENTS", "patient", "", f"page={page}")
+    AuditLog.log_action(db, current_user.id, "LIST_PATIENTS", "patient", "", details={"page": page})
     return {"items": patients, "total": total, "page": page, "limit": limit, "pages": pages}
 
 @router.get("/{patient_id}", response_model=PatientRead)
@@ -56,7 +56,7 @@ def get_patient(
     patient = db.get(Patient, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    AuditLog.log_action(current_user.id, "GET_PATIENT", "patient", patient_id)
+    AuditLog.log_action(db, current_user.id, "GET_PATIENT", "patient", patient_id)
     return patient
 
 @router.post("", response_model=PatientRead, status_code=status.HTTP_201_CREATED)
@@ -85,7 +85,7 @@ def create_patient(
     db.add(patient)
     db.commit()
     db.refresh(patient)
-    AuditLog.log_action(current_user.id, "CREATE_PATIENT", "patient", patient.id)
+    AuditLog.log_action(db, current_user.id, "CREATE_PATIENT", "patient", patient.id)
     return patient
 
 @router.put("/{patient_id}", response_model=PatientRead)
@@ -98,11 +98,11 @@ def update_patient(
     patient = db.get(Patient, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
-    for field, value in payload.dict(exclude_unset=True).items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(patient, field, value)
     db.commit()
     db.refresh(patient)
-    AuditLog.log_action(current_user.id, "UPDATE_PATIENT", "patient", patient_id)
+    AuditLog.log_action(db, current_user.id, "UPDATE_PATIENT", "patient", patient_id)
     return patient
 
 @router.delete("/{patient_id}", response_model=MessageResponse)
@@ -116,5 +116,5 @@ def delete_patient(
         raise HTTPException(status_code=404, detail="Patient not found")
     db.delete(patient)
     db.commit()
-    AuditLog.log_action(current_user.id, "DELETE_PATIENT", "patient", patient_id)
+    AuditLog.log_action(db, current_user.id, "DELETE_PATIENT", "patient", patient_id)
     return MessageResponse(message="Patient supprimé")

@@ -44,9 +44,25 @@ def list_payments(
 
 @router.post("", response_model=PaymentRead, status_code=status.HTTP_201_CREATED)
 def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
-    invoice = db.get(Invoice, payload.invoice_id)
+    # Vérification montant positif
+    if payload.amount <= 0:
+        raise HTTPException(status_code=400, detail="Le montant doit être supérieur à zéro")
+
+    # Verrouillage pessimiste pour éviter la race condition
+    invoice = db.scalar(
+        select(Invoice).where(Invoice.id == payload.invoice_id).with_for_update()
+    )
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Vérification anti-surpaiement
+    remaining = Decimal(invoice.total_amount) - Decimal(invoice.paid_amount)
+    if Decimal(payload.amount) > remaining:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Montant dépasse le solde restant ({remaining})"
+        )
+
     payment = Payment(**payload.model_dump())
     invoice.paid_amount = Decimal(invoice.paid_amount) + Decimal(payload.amount)
     if invoice.paid_amount >= invoice.total_amount:

@@ -70,7 +70,7 @@ apiClient.interceptors.response.use(
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
-        return new Promise(() => {}); // promesse jamais résolue — page reste silencieuse
+        return Promise.reject(new Error("Session expirée - veuillez vous reconnecter"));
       }
     }
 

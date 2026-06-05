@@ -13,6 +13,7 @@ class PaymentMethod(str, enum.Enum):
     CARTE = "CARTE"
     VIREMENT = "VIREMENT"
     CHEQUE = "CHEQUE"
+    MOBILE = "MOBILE"
 
 
 class Payment(Base):

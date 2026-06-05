@@ -19,16 +19,45 @@ STATUS_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST, UserRole.COLLECTOR, UserR
 
 
 def _enrich(db: Session, er: ExamRequest) -> dict:
+    """Enrichit un ExamRequest unique (utilisé après création/modification)."""
     base = ExamRequestRead.model_validate(er).model_dump()
-    patient = db.query(Patient).filter(Patient.id == er.patient_id).first()
-    exam    = db.query(Exam).filter(Exam.id == er.exam_id).first()
-    doctor  = db.query(User).filter(User.id == er.doctor_id).first()
+    patient = db.get(Patient, er.patient_id)
+    exam    = db.get(Exam, er.exam_id)
+    doctor  = db.get(User, er.doctor_id)
     base["patient_name"]  = f"{patient.first_name} {patient.last_name}" if patient else "—"
     base["record_number"] = patient.record_number if patient else "—"
     base["exam_name"]     = exam.name if exam else "—"
     base["exam_unit"]     = exam.unit or "" if exam else ""
     base["doctor_name"]   = f"{doctor.first_name} {doctor.last_name}" if doctor else "—"
     return base
+
+
+def _enrich_many(db: Session, items: list[ExamRequest]) -> list[dict]:
+    """Enrichit une liste d'ExamRequests en une seule passe (sans N+1)."""
+    if not items:
+        return []
+
+    patient_ids = list({er.patient_id for er in items})
+    exam_ids    = list({er.exam_id    for er in items})
+    doctor_ids  = list({er.doctor_id  for er in items})
+
+    patients = {p.id: p for p in db.scalars(select(Patient).where(Patient.id.in_(patient_ids)))}
+    exams    = {e.id: e for e in db.scalars(select(Exam).where(Exam.id.in_(exam_ids)))}
+    doctors  = {u.id: u for u in db.scalars(select(User).where(User.id.in_(doctor_ids)))}
+
+    result = []
+    for er in items:
+        base    = ExamRequestRead.model_validate(er).model_dump()
+        patient = patients.get(er.patient_id)
+        exam    = exams.get(er.exam_id)
+        doctor  = doctors.get(er.doctor_id)
+        base["patient_name"]  = f"{patient.first_name} {patient.last_name}" if patient else "—"
+        base["record_number"] = patient.record_number if patient else "—"
+        base["exam_name"]     = exam.name if exam else "—"
+        base["exam_unit"]     = exam.unit or "" if exam else ""
+        base["doctor_name"]   = f"{doctor.first_name} {doctor.last_name}" if doctor else "—"
+        result.append(base)
+    return result
 
 
 @router.get("")
@@ -59,7 +88,7 @@ def list_exam_requests(
          .all()
     )
     return {
-        "items": [_enrich(db, er) for er in items],
+        "items": _enrich_many(db, items),
         "total": total, "page": page, "limit": limit,
         "pages": max(1, math.ceil(total / limit)),
     }

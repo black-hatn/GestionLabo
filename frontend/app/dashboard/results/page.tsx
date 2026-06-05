@@ -304,6 +304,12 @@ export default function ResultsPage() {
   const [search, setSearch]         = useState("");
   const [filterStatus, setFilterStatus] = useState<"ALL" | ResultStatus>("ALL");
 
+  // Reset to page 1 when status filter changes
+  const handleFilterStatus = (s: "ALL" | ResultStatus) => {
+    setFilterStatus(s);
+    setPage(1);
+  };
+
   // Modal state
   const [modal, setModal]         = useState<ModalState>({ type: "idle" });
   const [formError, setFormError] = useState<string | null>(null);
@@ -328,7 +334,7 @@ export default function ResultsPage() {
   const [examRequests, setExamRequests] = useState<{ id: string; label: string }[]>([]);
 
   // ── React Query hooks ───────────────────────────────────────────────────
-  const { data, isLoading, isFetching, isError, error, refetch } = useResults(page, 10);
+  const { data, isLoading, isFetching, isError, error, refetch } = useResults(page, 10, filterStatus);
   const createResult = useCreateResult();
   const updateResult = useUpdateResult();
   const deleteResult = useDeleteResult();
@@ -397,15 +403,13 @@ export default function ResultsPage() {
 
   const saving = createResult.isPending || updateResult.isPending || deleteResult.isPending;
 
-  // Filtering (client-side on current page)
+  // Filtering — status is server-side via useResults; search is client-side on current page
   const filtered = results.filter(r => {
     const q = search.toLowerCase();
-    const matchSearch =
+    return !q ||
       (r.patient_name ?? "").toLowerCase().includes(q) ||
       (r.exam_name ?? "").toLowerCase().includes(q) ||
       r.id.toLowerCase().includes(q);
-    const matchStatus = filterStatus === "ALL" || r.status === filterStatus;
-    return matchSearch && matchStatus;
   });
 
   const stats = {
@@ -503,7 +507,7 @@ export default function ResultsPage() {
             {(["ALL", "NORMAL", "ANORMAL", "CRITIQUE"] as const).map(s => (
               <button
                 key={s}
-                onClick={() => setFilterStatus(s)}
+                onClick={() => handleFilterStatus(s)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors
                   ${filterStatus === s
                     ? "bg-emerald-500 text-white"

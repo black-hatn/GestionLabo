@@ -2,14 +2,15 @@
  * React Query hooks — Résultats biologiques
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import resultService, { ResultCreatePayload, ResultUpdatePayload } from "@/services/api/result";
+import resultService, { ResultCreatePayload, ResultUpdatePayload, ResultStatus } from "@/services/api/result";
 
 export const RESULTS_KEY = "results";
 
-export function useResults(page = 1, limit = 10) {
+export function useResults(page = 1, limit = 10, status?: "ALL" | ResultStatus) {
+  const resolvedStatus = status === "ALL" ? undefined : status;
   return useQuery({
-    queryKey: [RESULTS_KEY, page, limit],
-    queryFn: () => resultService.getResults(page, limit),
+    queryKey: [RESULTS_KEY, page, limit, resolvedStatus],
+    queryFn: () => resultService.getResults(page, limit, resolvedStatus),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
   });

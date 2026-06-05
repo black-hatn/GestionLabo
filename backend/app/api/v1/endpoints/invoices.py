@@ -66,7 +66,7 @@ def list_invoices(
         "limit": limit,
         "pages": pages,
     }
-    AuditLog.log_action(current_user.id, "LIST_INVOICES", "invoice", "")
+    AuditLog.log_action(db, current_user.id, "LIST_INVOICES", "invoice", "")
 
     return result
 
@@ -85,7 +85,7 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
         db.commit()
         db.refresh(invoice)
 
-    AuditLog.log_action(current_user.id, "GET_INVOICE", "invoice", invoice_id)
+    AuditLog.log_action(db, current_user.id, "GET_INVOICE", "invoice", invoice_id)
     return invoice
 
 @router.post("", response_model=InvoiceRead, status_code=status.HTTP_201_CREATED)
@@ -110,7 +110,7 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), curren
     db.commit()
     db.refresh(invoice)
 
-    AuditLog.log_action(current_user.id, "CREATE_INVOICE", "invoice", invoice.id, f"invoice_number={invoice.invoice_number}")
+    AuditLog.log_action(db, current_user.id, "CREATE_INVOICE", "invoice", invoice.id, details={"invoice_number": invoice.invoice_number})
     return invoice
 
 @router.put("/{invoice_id}", response_model=InvoiceRead)
@@ -120,13 +120,13 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: Session = Depend
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    for field, value in payload.dict(exclude_unset=True).items():
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
-    
+
     db.commit()
     db.refresh(invoice)
-    
-    AuditLog.log_action(current_user.id, "UPDATE_INVOICE", "invoice", invoice_id)
+
+    AuditLog.log_action(db, current_user.id, "UPDATE_INVOICE", "invoice", invoice_id)
     return invoice
 
 @router.post("/{invoice_id}/mark-paid", response_model=MessageResponse)
@@ -136,11 +136,11 @@ def mark_invoice_paid(invoice_id: str, db: Session = Depends(get_db), current_us
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     
-    invoice.status = "PAID"
-    invoice.paid_date = datetime.now()
+    invoice.status = InvoiceStatus.PAYEE
+    invoice.paid_date = date.today()
     db.commit()
     
-    AuditLog.log_action(current_user.id, "MARK_INVOICE_PAID", "invoice", invoice_id)
+    AuditLog.log_action(db, current_user.id, "MARK_INVOICE_PAID", "invoice", invoice_id)
     return MessageResponse(message="Invoice marked as paid")
 
 @router.delete("/{invoice_id}", response_model=MessageResponse)
@@ -153,5 +153,5 @@ def delete_invoice(invoice_id: str, db: Session = Depends(get_db), current_user:
     db.delete(invoice)
     db.commit()
     
-    AuditLog.log_action(current_user.id, "DELETE_INVOICE", "invoice", invoice_id)
+    AuditLog.log_action(db, current_user.id, "DELETE_INVOICE", "invoice", invoice_id)
     return MessageResponse(message="Invoice deleted successfully")

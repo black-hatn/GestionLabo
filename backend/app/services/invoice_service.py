@@ -35,7 +35,7 @@ class InvoiceService:
             invoice_number=invoice_create.invoice_number,
             total_amount=invoice_create.total_amount,
             paid_amount=Decimal("0.00"),
-            status=InvoiceStatus.DRAFT,
+            status=InvoiceStatus.BROUILLON,
             issue_date=invoice_create.issue_date,
             due_date=invoice_create.due_date,
             paid_date=None,
@@ -78,6 +78,6 @@ class InvoiceService:
         if not invoice:
             return {"error": "Invoice not found"}
 
-        invoice.status = InvoiceStatus.CANCELLED
+        invoice.status = InvoiceStatus.ANNULEE
         db.commit()
         return {"status": "cancelled"}

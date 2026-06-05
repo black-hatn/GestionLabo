@@ -5,7 +5,8 @@ Permet de consulter l'historique complet des actions effectuées sur la platefor
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_roles
+from app.api.deps import require_roles
+from app.config.database import get_db
 from app.models.user import UserRole
 from app.models.audit_log import AuditLog as AuditLogModel
 from app.utils.audit_log import AuditLog

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Shield, Search, ChevronLeft, ChevronRight, AlertCircle, Loader2 } from "lucide-react";
-import { useAuthStore } from "@/lib/auth-store";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import apiClient from "@/services/api/client";
 import { formatDate } from "@/lib/utils";
 
@@ -59,8 +60,6 @@ const RESOURCE_TYPES = [
 
 /* ─ Page ────────────────────────────────────────────────────────────── */
 export default function AuditLogsPage() {
-  const user = useAuthStore(state => state.user);
-
   const [logs, setLogs]                   = useState<AuditLog[]>([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState<string | null>(null);
@@ -105,29 +104,9 @@ export default function AuditLogsPage() {
     void loadLogs(page);
   }, [loadLogs, page]);
 
-  /* ─ Access denied ──────────────────────────────────────────────── */
-  if (user?.role !== "ADMIN") {
-    return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: "linear-gradient(135deg, #060e1c 0%, #0a1525 100%)" }}
-      >
-        <div
-          className="rounded-2xl border p-10 flex flex-col items-center gap-4 text-center max-w-sm"
-          style={{ background: "rgba(12,24,40,0.92)", borderColor: "rgba(255,255,255,0.07)" }}
-        >
-          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-            <Shield className="w-7 h-7 text-red-400" />
-          </div>
-          <h2 className="text-lg font-extrabold text-white">Accès Refusé</h2>
-          <p className="text-sm text-slate-400 font-semibold">
-            Cette page est réservée aux administrateurs.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <ProtectedRoute>
+    <RoleGuard allowedRoles={["ADMIN"]}>
     <div
       className="min-h-screen px-4 py-6"
       style={{ background: "linear-gradient(135deg, #060e1c 0%, #0a1525 60%, #050c18 100%)" }}
@@ -352,5 +331,7 @@ export default function AuditLogsPage() {
         )}
       </div>
     </div>
+    </RoleGuard>
+    </ProtectedRoute>
   );
 }
