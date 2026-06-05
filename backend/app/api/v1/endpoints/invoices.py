@@ -29,7 +29,7 @@ router = APIRouter()
 def list_invoices(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=500),
     status_filter: str = Query("", min_length=0),
     current_user: User = Depends(get_current_user),
 ):

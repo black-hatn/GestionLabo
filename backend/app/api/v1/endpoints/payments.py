@@ -18,7 +18,7 @@ router = APIRouter(dependencies=[Depends(require_roles(UserRole.ADMIN))])
 def list_payments(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=500),
     invoice_id: str = Query(None),
 ):
     query = select(Payment).order_by(Payment.paid_at.desc())

@@ -19,7 +19,7 @@ WRITE_ROLES = (UserRole.ADMIN, UserRole.RECEPTIONIST)
 def list_patients(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=500),
     search: str = Query("", min_length=0),
     current_user: User = Depends(require_roles(*ALL_ROLES)),
 ):
