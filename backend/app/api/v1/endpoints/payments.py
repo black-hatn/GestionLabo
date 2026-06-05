@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_roles
+from app.api.deps import require_roles
 from app.config.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
 from app.models.payment import Payment
@@ -46,7 +46,9 @@ def list_payments(
 def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
     # Vérification montant positif
     if payload.amount <= 0:
-        raise HTTPException(status_code=400, detail="Le montant doit être supérieur à zéro")
+        raise HTTPException(
+            status_code=400, detail="Le montant doit être supérieur à zéro"
+        )
 
     # Verrouillage pessimiste pour éviter la race condition
     invoice = db.scalar(
@@ -59,8 +61,7 @@ def create_payment(payload: PaymentCreate, db: Session = Depends(get_db)):
     remaining = Decimal(invoice.total_amount) - Decimal(invoice.paid_amount)
     if Decimal(payload.amount) > remaining:
         raise HTTPException(
-            status_code=400,
-            detail=f"Montant dépasse le solde restant ({remaining})"
+            status_code=400, detail=f"Montant dépasse le solde restant ({remaining})"
         )
 
     payment = Payment(**payload.model_dump())

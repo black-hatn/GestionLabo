@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from datetime import datetime, date
+from datetime import date
 
 from app.config.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
-from app.schemas.domain import InvoiceCreate, InvoiceUpdate, InvoiceRead, PaginatedInvoiceResponse
+from app.schemas.domain import (
+    InvoiceCreate,
+    InvoiceUpdate,
+    InvoiceRead,
+    PaginatedInvoiceResponse,
+)
 from app.schemas.common import MessageResponse
 from app.api.deps import get_current_user, require_roles
 from app.models.user import User, UserRole
@@ -23,7 +28,9 @@ def _auto_mark_overdue(invoices: list, db: Session) -> bool:
                 changed = True
     return changed
 
+
 router = APIRouter()
+
 
 @router.get("", response_model=PaginatedInvoiceResponse)
 def list_invoices(
@@ -34,13 +41,19 @@ def list_invoices(
     current_user: User = Depends(get_current_user),
 ):
     """List all invoices with optional status filter, scoped to patient if USER role"""
-    from app.models.patient import Patient
 
     query = select(Invoice)
     count_query = select(func.count()).select_from(Invoice)
 
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH, UserRole.RECEPTIONIST]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    if current_user.role not in [
+        UserRole.ADMIN,
+        UserRole.DOCTOR,
+        UserRole.LAB_TECH,
+        UserRole.RECEPTIONIST,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+        )
 
     if status_filter:
         query = query.where(Invoice.status == status_filter)
@@ -70,15 +83,27 @@ def list_invoices(
 
     return result
 
+
 @router.get("/{invoice_id}", response_model=InvoiceRead)
-def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_invoice(
+    invoice_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """Get a specific invoice"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    
-    if current_user.role not in [UserRole.ADMIN, UserRole.DOCTOR, UserRole.LAB_TECH, UserRole.RECEPTIONIST]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+
+    if current_user.role not in [
+        UserRole.ADMIN,
+        UserRole.DOCTOR,
+        UserRole.LAB_TECH,
+        UserRole.RECEPTIONIST,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+        )
 
     # Auto-workflow: marquer la facture en retard si nécessaire
     if _auto_mark_overdue([invoice], db):
@@ -88,11 +113,20 @@ def get_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: Us
     AuditLog.log_action(db, current_user.id, "GET_INVOICE", "invoice", invoice_id)
     return invoice
 
+
 @router.post("", response_model=InvoiceRead, status_code=status.HTTP_201_CREATED)
-def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.DOCTOR, UserRole.RECEPTIONIST))):
+def create_invoice(
+    payload: InvoiceCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(
+            UserRole.ADMIN, UserRole.LAB_TECH, UserRole.DOCTOR, UserRole.RECEPTIONIST
+        )
+    ),
+):
     """Create a new invoice"""
     import uuid
-    
+
     invoice = Invoice(
         id=str(uuid.uuid4()),
         patient_id=payload.patient_id,
@@ -110,16 +144,31 @@ def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db), curren
     db.commit()
     db.refresh(invoice)
 
-    AuditLog.log_action(db, current_user.id, "CREATE_INVOICE", "invoice", invoice.id, details={"invoice_number": invoice.invoice_number})
+    AuditLog.log_action(
+        db,
+        current_user.id,
+        "CREATE_INVOICE",
+        "invoice",
+        invoice.id,
+        details={"invoice_number": invoice.invoice_number},
+    )
     return invoice
 
+
 @router.put("/{invoice_id}", response_model=InvoiceRead)
-def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.RECEPTIONIST))):
+def update_invoice(
+    invoice_id: str,
+    payload: InvoiceUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.RECEPTIONIST)
+    ),
+):
     """Update an invoice"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    
+
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
 
@@ -129,29 +178,39 @@ def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: Session = Depend
     AuditLog.log_action(db, current_user.id, "UPDATE_INVOICE", "invoice", invoice_id)
     return invoice
 
+
 @router.post("/{invoice_id}/mark-paid", response_model=MessageResponse)
-def mark_invoice_paid(invoice_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN))):
+def mark_invoice_paid(
+    invoice_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
     """Mark an invoice as paid"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    
+
     invoice.status = InvoiceStatus.PAYEE
     invoice.paid_date = date.today()
     db.commit()
-    
+
     AuditLog.log_action(db, current_user.id, "MARK_INVOICE_PAID", "invoice", invoice_id)
     return MessageResponse(message="Invoice marked as paid")
 
+
 @router.delete("/{invoice_id}", response_model=MessageResponse)
-def delete_invoice(invoice_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_roles(UserRole.ADMIN))):
+def delete_invoice(
+    invoice_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.ADMIN)),
+):
     """Delete an invoice"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
-    
+
     db.delete(invoice)
     db.commit()
-    
+
     AuditLog.log_action(db, current_user.id, "DELETE_INVOICE", "invoice", invoice_id)
     return MessageResponse(message="Invoice deleted successfully")
