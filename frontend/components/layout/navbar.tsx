@@ -20,29 +20,31 @@ function SystemStatus() {
   useEffect(() => {
     let cancelled = false;
     let timerId: ReturnType<typeof setTimeout>;
-    let retryDelay = 10_000;
+    // Délai de retry fixe de 15s (pas d'exponential backoff pour ne pas
+    // rester rouge trop longtemps pendant le cold start Render ~50s)
+    const RETRY_DELAY = 15_000;
+    const POLL_INTERVAL = 5 * 60 * 1000; // 5 min quand tout va bien
 
     const check = async () => {
       try {
+        // Timeout 65s : couvre le cold start Render free tier (50s+)
         const res = await fetch(`${API_BASE.replace("/api/v1", "")}/health`, {
-          signal: AbortSignal.timeout(5000),
+          signal: AbortSignal.timeout(65_000),
+          cache: "no-store",
         });
         if (!cancelled) {
           if (res.ok) {
             setStatus("ok");
-            retryDelay = 10_000; // reset backoff
-            timerId = setTimeout(check, 5 * 60 * 1000);
+            timerId = setTimeout(check, POLL_INTERVAL);
           } else {
             setStatus("down");
-            retryDelay = Math.min(retryDelay * 2, 5 * 60 * 1000);
-            timerId = setTimeout(check, retryDelay);
+            timerId = setTimeout(check, RETRY_DELAY);
           }
         }
       } catch {
         if (!cancelled) {
           setStatus("down");
-          retryDelay = Math.min(retryDelay * 2, 5 * 60 * 1000);
-          timerId = setTimeout(check, retryDelay);
+          timerId = setTimeout(check, RETRY_DELAY);
         }
       }
     };
@@ -51,7 +53,19 @@ function SystemStatus() {
     return () => { cancelled = true; clearTimeout(timerId); };
   }, []);
 
-  if (status === "checking") return null;
+  // Pendant le checking : badge "Démarrage..." (amber) au lieu de rien
+  if (status === "checking") {
+    return (
+      <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border ml-2 border-amber-500/20"
+           style={{ background: "rgba(245,158,11,0.06)" }}>
+        <span className="relative flex h-1.5 w-1.5">
+          <span className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-75" />
+          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500" />
+        </span>
+        <span className="text-[10px] font-bold tracking-wide text-amber-400/80">Démarrage…</span>
+      </div>
+    );
+  }
 
   const ok = status === "ok";
   return (
