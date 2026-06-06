@@ -2,6 +2,7 @@
 Result Service - handles exam result business logic
 """
 import logging
+import uuid as _uuid
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models.result import Result
@@ -13,9 +14,8 @@ from app.schemas.domain import ResultCreate, ResultRead
 from uuid import uuid4
 from datetime import datetime, timedelta, date
 import math
-import time
 from app.utils.email_service import send_result_notification
-from app.models.invoice import Invoice as InvoiceModel
+from app.models.invoice import Invoice as InvoiceModel, InvoiceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -114,11 +114,12 @@ def _auto_invoice(db: Session, result: Result, exam_request: ExamRequest | None)
         ).first()
         if not existing:
             auto_invoice = InvoiceModel(
+                id=str(_uuid.uuid4()),
                 patient_id=exam_request.patient_id,
-                invoice_number=f"AUTO-{int(time.time())}",
+                invoice_number=f"AUTO-{_uuid.uuid4().hex[:8].upper()}",
                 total_amount=5000.0,
                 paid_amount=0.0,
-                status="BROUILLON",
+                status=InvoiceStatus.BROUILLON,
                 issue_date=date.today(),
                 due_date=date.today() + timedelta(days=30),
             )

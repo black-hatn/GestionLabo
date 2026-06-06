@@ -25,9 +25,13 @@ export interface InvoicesResponse {
 }
 
 const invoiceService = {
-  async getInvoices(page: number = 1, limit: number = 10): Promise<InvoicesResponse> {
+  async getInvoices(page: number = 1, limit: number = 10, statusFilter?: string): Promise<InvoicesResponse> {
     const response = await apiClient.get<InvoicesResponse>('/factures', {
-      params: { page, limit }
+      params: {
+        page,
+        limit,
+        ...(statusFilter ? { status_filter: statusFilter } : {}),
+      },
     });
     return response.data;
   },

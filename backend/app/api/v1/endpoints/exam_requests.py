@@ -100,7 +100,11 @@ def create_exam_request(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(*CREATE_ROLES)),
 ):
-    item = ExamRequest(**payload.model_dump())
+    data = payload.model_dump()
+    # Sécurité : forcer le doctor_id au user connecté (sauf ADMIN qui peut déléguer)
+    if current_user.role != UserRole.ADMIN:
+        data["doctor_id"] = current_user.id
+    item = ExamRequest(**data)
     db.add(item)
     db.commit()
     db.refresh(item)

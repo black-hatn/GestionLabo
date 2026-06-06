@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from datetime import date
+import uuid
 
 from app.config.database import get_db
 from app.models.invoice import Invoice, InvoiceStatus
@@ -125,8 +127,6 @@ def create_invoice(
     ),
 ):
     """Create a new invoice"""
-    import uuid
-
     invoice = Invoice(
         id=str(uuid.uuid4()),
         patient_id=payload.patient_id,
@@ -141,8 +141,20 @@ def create_invoice(
     )
 
     db.add(invoice)
-    db.commit()
-    db.refresh(invoice)
+    try:
+        db.commit()
+        db.refresh(invoice)
+    except IntegrityError as e:
+        db.rollback()
+        err = str(e.orig).lower()
+        if "invoice_number" in err or "unique" in err:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Le numéro de facture '{payload.invoice_number}' existe déjà",
+            )
+        if "patient_id" in err or "foreign" in err:
+            raise HTTPException(status_code=400, detail="Patient introuvable")
+        raise HTTPException(status_code=400, detail="Données invalides")
 
     AuditLog.log_action(
         db,
@@ -172,8 +184,12 @@ def update_invoice(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
 
-    db.commit()
-    db.refresh(invoice)
+    try:
+        db.commit()
+        db.refresh(invoice)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Mise à jour invalide")
 
     AuditLog.log_action(db, current_user.id, "UPDATE_INVOICE", "invoice", invoice_id)
     return invoice

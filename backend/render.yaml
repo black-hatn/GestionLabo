@@ -2,23 +2,38 @@ services:
   - type: web
     name: gestionlabo-api
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    # Installe les dépendances ET applique les migrations Alembic avant le démarrage
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: USE_SQLITE_DEV
         value: false
+      - key: ENVIRONMENT
+        value: production
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 480
+        value: 30
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: 30
       - key: DATABASE_URL
         fromDatabase:
           name: gestionlabo-db
           property: connectionString
+      # CORS : ajouter ici l'URL exacte de ton frontend Vercel
+      - key: CORS_ORIGINS
+        value: '["https://novabio-labo-black-hatns-projects.vercel.app","https://novabio-labo.vercel.app"]'
+      # Email (optionnel — à renseigner dans le dashboard Render)
+      # - key: SMTP_ENABLED
+      #   value: true
+      # - key: SMTP_USER
+      #   value: ton-email@gmail.com
+      # - key: SMTP_PASSWORD
+      #   value: ton-app-password
+      # - key: SMTP_FROM
+      #   value: ton-email@gmail.com
 
 databases:
   - name: gestionlabo-db

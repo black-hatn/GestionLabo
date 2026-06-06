@@ -475,7 +475,7 @@ function EditStatusModal({
 /* ── Page principale ── */
 export default function InvoicesPage() {
   const user = useAuthStore(s => s.user);
-  const canWrite  = ["ADMIN", "RECEPTIONIST"].includes(user?.role ?? "");
+  const canWrite  = ["ADMIN", "RECEPTIONIST", "LAB_TECH", "DOCTOR"].includes(user?.role ?? "");
   const canDelete = user?.role === "ADMIN";
 
   const [invoices, setInvoices]       = useState<Invoice[]>([]);
@@ -492,19 +492,26 @@ export default function InvoicesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await invoiceService.getInvoices(page, 10);
+      const res = await invoiceService.getInvoices(
+        page,
+        10,
+        filterStatus !== "ALL" ? filterStatus : undefined,
+      );
       setInvoices(res.items || []);
       setTotal(res.total || 0);
       setTotalPages(res.pages || 1);
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || err?.message || "Erreur de chargement");
     } finally { setLoading(false); }
-  }, [page]);
+  }, [page, filterStatus]);
+
+  // Réinitialiser la page à 1 quand le filtre change
+  useEffect(() => { setPage(1); }, [filterStatus]);
 
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    patientService.getPatients(1, 200)
+    patientService.getPatients(1, 500)
       .then(r => setPatients(r.items || []))
       .catch(() => toast.error("Impossible de charger la liste des patients"));
   }, []);
@@ -549,7 +556,7 @@ export default function InvoicesPage() {
 
   return (
     <ProtectedRoute>
-      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST"]}>
+      <RoleGuard allowedRoles={["ADMIN", "RECEPTIONIST", "LAB_TECH", "DOCTOR"]}>
         <div className="space-y-6 animate-fade-in">
 
           {/* ── Header ── */}
