@@ -1,21 +1,21 @@
 /**
- * Keep-alive route — pings Render backend every 10 min via Vercel cron
- * Prevents Render free tier cold starts (service sleeps after 15 min inactivity)
+ * Keep-alive route — pings Render backend pour éviter le cold start.
+ * URL hardcodée (indépendante de NEXT_PUBLIC_API_BASE_URL qui pointe vers le proxy).
  */
-export async function GET() {
-  const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL?.replace('/api/v1', '')
-    || 'https://gestionlabo.onrender.com';
+const RENDER_HEALTH = "https://gestionlabo.onrender.com/health";
 
+export async function GET() {
   try {
-    const res = await fetch(`${backendUrl}/health`, {
+    const res = await fetch(RENDER_HEALTH, {
       next: { revalidate: 0 },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(65_000), // couvre le cold start (~50s)
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     return Response.json({
-      ok: true,
+      ok: res.ok,
+      status: res.status,
       backend: data,
-      pinged_at: new Date().toISOString()
+      pinged_at: new Date().toISOString(),
     });
   } catch (e: any) {
     return Response.json({ ok: false, error: e.message }, { status: 503 });
