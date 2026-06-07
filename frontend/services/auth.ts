@@ -1,4 +1,10 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+// Toujours passer par le proxy Next.js (même origine → invisible pour les adblockers).
+// Si NEXT_PUBLIC_API_BASE_URL pointe vers localhost, on l'utilise (dev local backend).
+// Sinon on ignore la valeur (elle peut être écrasée sur Vercel par un placeholder).
+const _envUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
+const API_BASE_URL = _envUrl.startsWith('http://localhost')
+  ? _envUrl
+  : '/api/proxy';
 
 export interface AuthTokens {
   access_token: string;

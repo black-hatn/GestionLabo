@@ -4,11 +4,8 @@ const { withSentryConfig } = require("@sentry/nextjs");
 const BACKEND_URL = "https://gestionlabo.onrender.com";
 
 const nextConfig = {
-  // Le client API utilise /api/proxy → rewrite server-side vers Render.
-  // Avantage : même origine (pas de CORS, pas d'adblocker).
-  env: {
-    NEXT_PUBLIC_API_BASE_URL: "/api/proxy",
-  },
+  // NEXT_PUBLIC_API_BASE_URL n'est plus utilisé (la valeur est hardcodée dans services/).
+  // Le proxy /api/proxy/* est géré par app/api/proxy/[...path]/route.ts.
   async rewrites() {
     return [
       // Health check uniquement (évite l'adblocker sur /health)
