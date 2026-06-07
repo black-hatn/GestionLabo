@@ -105,11 +105,22 @@ def debug_test_db():
                 results["factures_count"] = count
             except Exception as e:
                 results["factures_error"] = str(e)
-            # 4. Colonnes de invoices si la table existe
+            # 4. Colonnes de invoices et audit_logs
             if "invoices" in results.get("tables", []):
                 results["invoices_columns"] = [
                     c["name"] for c in inspector.get_columns("invoices")
                 ]
+            if "audit_logs" in results.get("tables", []):
+                results["audit_logs_columns"] = [
+                    c["name"] for c in inspector.get_columns("audit_logs")
+                ]
+                try:
+                    results["audit_logs_count"] = db.execute(text("SELECT COUNT(*) FROM audit_logs")).scalar()
+                    results["audit_logs_sample"] = [
+                        dict(r._mapping) for r in db.execute(text("SELECT id, action, resource_type, status, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 3")).fetchall()
+                    ]
+                except Exception as e:
+                    results["audit_logs_error"] = str(e)
             # 5. Test COUNT patients
             try:
                 count = db.execute(text("SELECT COUNT(*) FROM patients")).scalar()
