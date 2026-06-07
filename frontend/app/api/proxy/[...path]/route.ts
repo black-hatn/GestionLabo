@@ -37,10 +37,12 @@ async function proxy(req: NextRequest, context: { params: Promise<{ path: string
     });
 
     // Copier les headers de réponse.
-    // On retire content-encoding : Node fetch décompresse déjà le body (gzip/br),
-    // donc le body streamé est du texte brut. Si on transmet quand même le header,
-    // le navigateur tente une 2e décompression → ERR_CONTENT_DECODING_FAILED.
-    const STRIP_RES = ["transfer-encoding", "connection", "content-encoding"];
+    // - content-encoding : Node fetch décompresse déjà le body (gzip/br) → on strip
+    //   sinon le browser tente une 2e décompression → ERR_CONTENT_DECODING_FAILED.
+    // - content-length : correspond à la taille COMPRESSÉE ; le body qu'on envoie
+    //   est décompressé (plus long) → le browser couperait la lecture trop tôt → JSON tronqué.
+    //   On laisse Next.js calculer la bonne Content-Length depuis l'arrayBuffer.
+    const STRIP_RES = ["transfer-encoding", "connection", "content-encoding", "content-length"];
     const resHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
       if (!STRIP_RES.includes(key.toLowerCase())) {
