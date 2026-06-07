@@ -48,7 +48,11 @@ async function proxy(req: NextRequest, context: { params: Promise<{ path: string
       }
     });
 
-    return new NextResponse(upstream.body, {
+    // Lire le body complet avant de renvoyer — évite la troncature du ReadableStream
+    // dans le runtime Next.js (body partiellement consommé → JSON invalide).
+    const body = await upstream.arrayBuffer();
+
+    return new NextResponse(body, {
       status: upstream.status,
       statusText: upstream.statusText,
       headers: resHeaders,
