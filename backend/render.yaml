@@ -2,10 +2,8 @@ services:
   - type: web
     name: gestionlabo-api
     runtime: python
-    # 1. Installe les dépendances
-    # 2. create_all : crée les tables manquantes AVANT Alembic (évite "relation does not exist")
-    # 3. alembic upgrade head : ajoute les colonnes incrémentales
-    buildCommand: pip install -r requirements.txt && python -c "from app.config.database import engine; import app.models; from app.config.database import Base; Base.metadata.create_all(engine)" && alembic upgrade head
+    # Script de migration idempotent (remplace alembic qui échouait sur tables pré-existantes)
+    buildCommand: pip install -r requirements.txt && python migrate.py
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: USE_SQLITE_DEV
