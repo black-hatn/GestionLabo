@@ -43,6 +43,20 @@ class AuditLog:
             status:        SUCCESS | FAILURE | DENIED.
             ip_address:    Adresse IP de la requête (optionnel).
         """
+        # Auto-résolution email/rôle depuis la DB si non fournis
+        if user_id and (user_email is None or user_role is None):
+            try:
+                from app.models.user import User as UserModel
+                u = db.get(UserModel, user_id)
+                if u:
+                    if user_email is None:
+                        user_email = u.email
+                    if user_role is None:
+                        role = u.role
+                        user_role = role.value if hasattr(role, "value") else str(role)
+            except Exception:
+                pass
+
         try:
             entry = AuditLogModel(
                 user_id=user_id,

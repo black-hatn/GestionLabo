@@ -87,9 +87,16 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=429, detail="Trop de tentatives. Réessayez dans 1 minute.")
     user = db.scalar(select(User).where(User.email == payload.email))
     if not user or not verify_password(payload.password, user.password_hash):
+        if user:
+            AuditLog.log_action(db, user.id, "LOGIN_FAILED", "auth", user.id,
+                                status="FAILURE", details={"reason": "bad_password"})
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user.is_active:
+        AuditLog.log_action(db, user.id, "LOGIN_FAILED", "auth", user.id,
+                            status="FAILURE", details={"reason": "account_disabled"})
         raise HTTPException(status_code=403, detail="Compte désactivé. Contactez l'administrateur.")
+    AuditLog.log_action(db, user.id, "LOGIN", "auth", user.id,
+                        details={"email": user.email})
     return TokenPair(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
