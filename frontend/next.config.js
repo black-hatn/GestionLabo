@@ -11,11 +11,7 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      {
-        source: "/api/proxy/:path*",
-        destination: `${BACKEND_URL}/api/v1/:path*`,
-      },
-      // Health check accessible depuis le front sans adblocker
+      // Health check uniquement (évite l'adblocker sur /health)
       {
         source: "/api/health",
         destination: `${BACKEND_URL}/health`,
