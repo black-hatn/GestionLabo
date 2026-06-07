@@ -83,10 +83,12 @@ export default function AuditLogsPage() {
       if (resourceTypeFilter) params.resource_type = resourceTypeFilter;
       if (statusFilter)       params.status        = statusFilter.toUpperCase();
 
-      const resp = await apiClient.get<AuditLog[]>("/audit-logs", { params });
-      const data: AuditLog[] = Array.isArray(resp.data) ? resp.data : [];
+      const resp = await apiClient.get<{ items: AuditLog[]; total: number } | AuditLog[]>("/audit-logs", { params });
+      const respData = resp.data as any;
+      const data: AuditLog[] = Array.isArray(respData) ? respData : (respData?.items ?? []);
+      const total: number = respData?.total ?? data.length;
       setLogs(data);
-      setHasMore(data.length === LIMIT);
+      setHasMore(pageNum * LIMIT + data.length < total);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
         ?? "Impossible de charger les journaux d'audit.";
