@@ -160,19 +160,18 @@ def delete_patient(
         select(Invoice.id).where(Invoice.patient_id == patient_id)
     ).scalars().all()
     if invoice_ids:
-        db.execute(
-            select(Payment).where(Payment.invoice_id.in_(invoice_ids))
-        )
         for payment in db.execute(
             select(Payment).where(Payment.invoice_id.in_(invoice_ids))
         ).scalars().all():
             db.delete(payment)
+    db.flush()  # force DELETE payments avant invoices
 
     # 2. Factures du patient
     for invoice in db.execute(
         select(Invoice).where(Invoice.patient_id == patient_id)
     ).scalars().all():
         db.delete(invoice)
+    db.flush()  # force DELETE invoices avant patient
 
     # 3. Résultats liés aux demandes d'examen du patient
     exam_req_ids = db.execute(
@@ -183,12 +182,14 @@ def delete_patient(
             select(Result).where(Result.exam_request_id.in_(exam_req_ids))
         ).scalars().all():
             db.delete(result)
+    db.flush()  # force DELETE results avant exam_requests
 
     # 4. Demandes d'examen du patient
     for exam_req in db.execute(
         select(ExamRequest).where(ExamRequest.patient_id == patient_id)
     ).scalars().all():
         db.delete(exam_req)
+    db.flush()  # force DELETE exam_requests avant patient
 
     # 5. Patient lui-même
     db.delete(patient)
