@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from app.config.database import Base, engine
 from app.api.v1.router import api_router
 # Import all models so SQLAlchemy registers them before create_all
@@ -7,12 +8,15 @@ from app.models import password_reset_token as _  # noqa: F401
 from app.config.settings import get_settings
 from app.middleware.security import SecurityHeadersMiddleware
 import logging
+import traceback
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Schema géré par Alembic — ne pas utiliser create_all en production
-# Base.metadata.create_all(bind=engine)
+# Crée les tables manquantes sans toucher aux tables existantes.
+# Nécessaire si la DB a été recréée (Render free tier expire après 90j).
+# Alembic gère les migrations incrémentales, mais ne crée pas les tables initiales.
+Base.metadata.create_all(bind=engine)
 
 _settings = get_settings()
 
@@ -32,6 +36,17 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Expose le traceback complet pour faciliter le debug en production."""
+    tb = traceback.format_exc()
+    logger.error("[500] %s %s\n%s", request.method, request.url.path, tb)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "traceback": tb},
+    )
 
 
 @app.on_event("startup")
