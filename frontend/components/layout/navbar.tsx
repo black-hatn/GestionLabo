@@ -12,7 +12,8 @@ import Link from "next/link";
 import resultService, { ResultItem } from "@/services/api/result";
 
 /* ── Composant badge santé backend ─────────────────────────────────────── */
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+// Health check via proxy Next.js — même origine, pas bloqué par adblocker
+const HEALTH_URL = "/api/health";
 
 function SystemStatus() {
   const [status, setStatus] = useState<"checking" | "ok" | "down">("checking");
@@ -28,7 +29,7 @@ function SystemStatus() {
     const check = async () => {
       try {
         // Timeout 65s : couvre le cold start Render free tier (50s+)
-        const res = await fetch(`${API_BASE.replace("/api/v1", "")}/health`, {
+        const res = await fetch(HEALTH_URL, {
           signal: AbortSignal.timeout(65_000),
           cache: "no-store",
         });
