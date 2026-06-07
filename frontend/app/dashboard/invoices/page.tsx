@@ -172,7 +172,7 @@ function CreateModal({
 }: { patients: Patient[]; onClose: () => void; onCreate: () => void }) {
   const [form, setForm] = useState({
     patient_id: "",
-    total_amount: "", issue_date: todayISO(), due_date: "",
+    total_amount: "", issue_date: todayISO(), due_date: todayISO(),
     currency: "XOF" as Currency,
     payment_type: "",
   });
