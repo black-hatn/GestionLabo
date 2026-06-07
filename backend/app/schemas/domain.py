@@ -48,7 +48,7 @@ class RefreshRequest(BaseModel):
 
 
 class PatientCreate(BaseModel):
-    record_number: str
+    record_number: str | None = None  # auto-généré si absent
     first_name: str
     last_name: str
     birth_date: date
@@ -210,7 +210,7 @@ class ResultRead(ORMModel):
 
 class InvoiceCreate(BaseModel):
     patient_id: str
-    invoice_number: str
+    invoice_number: str | None = None  # auto-généré si absent
     total_amount: Decimal
     issue_date: date
     due_date: date

@@ -107,7 +107,15 @@ function PatientFormDialog({ mode, patient, open, onClose, saving, error, onSubm
               </div>
             )}
 
-            {mode === "create" && field("N° Dossier", "record_number", { placeholder: "ex: PAT-0001" })}
+            {mode === "create" && (
+              <div>
+                <label className="block text-xs font-semibold dark:text-slate-400 text-slate-600 mb-1.5">N° Dossier</label>
+                <div className="w-full px-3 py-2.5 text-sm rounded-xl border dark:border-white/[0.06] border-slate-200 dark:bg-white/[0.02] bg-slate-50 dark:text-slate-500 text-slate-400 italic flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                  Auto-généré (PAT-{new Date().getFullYear()}-XXXX)
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               {field("Prénom", "first_name", { placeholder: "ex: Mahamat" })}
@@ -304,7 +312,10 @@ export default function PatientsPage() {
   const handleSubmit = (data: any) => {
     setFormError(null);
     if (modal.type === "create") {
-      createPatient.mutate(data, {
+      // Supprimer record_number vide pour laisser le backend auto-générer
+      const { record_number, ...rest } = data;
+      const payload = record_number ? { ...rest, record_number } : rest;
+      createPatient.mutate(payload, {
         onSuccess: closeModal,
         onError: (err: any) => setFormError(err?.response?.data?.detail ?? err?.message ?? "Erreur"),
       });

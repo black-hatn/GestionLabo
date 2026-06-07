@@ -127,10 +127,14 @@ def create_invoice(
     ),
 ):
     """Create a new invoice"""
+    from app.utils.numbering import next_invoice_number
+
+    invoice_number = payload.invoice_number or next_invoice_number(db)
+
     invoice = Invoice(
         id=str(uuid.uuid4()),
         patient_id=payload.patient_id,
-        invoice_number=payload.invoice_number,
+        invoice_number=invoice_number,
         total_amount=payload.total_amount,
         paid_amount=0,
         status=InvoiceStatus.BROUILLON,
@@ -150,7 +154,7 @@ def create_invoice(
         if "invoice_number" in err or "unique" in err:
             raise HTTPException(
                 status_code=409,
-                detail=f"Le numéro de facture '{payload.invoice_number}' existe déjà",
+                detail=f"Le numéro de facture '{invoice_number}' existe déjà",
             )
         if "patient_id" in err or "foreign" in err:
             raise HTTPException(status_code=400, detail="Patient introuvable")

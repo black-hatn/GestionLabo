@@ -63,7 +63,6 @@ function fmtAmount(n: number | string, currency = "XOF") {
   return currency === "EUR" ? `${val} ${cfg.symbol}` : currency === "USD" ? `${cfg.symbol}${val}` : `${val} ${cfg.symbol}`;
 }
 function todayISO() { return new Date().toISOString().split("T")[0]; }
-function genNum() { return `FAC-${Date.now().toString().slice(-8)}`; }
 
 /* ── Bouton PDF téléchargement ── */
 function InvoiceDownloadButton({ invoice, patient }: { invoice: Invoice; patient: Patient | undefined }) {
@@ -172,7 +171,7 @@ function CreateModal({
   patients, onClose, onCreate,
 }: { patients: Patient[]; onClose: () => void; onCreate: () => void }) {
   const [form, setForm] = useState({
-    patient_id: "", invoice_number: genNum(),
+    patient_id: "",
     total_amount: "", issue_date: todayISO(), due_date: "",
     currency: "XOF" as Currency,
     payment_type: "",
@@ -189,7 +188,6 @@ function CreateModal({
     try {
       await invoiceService.createInvoice({
         patient_id: form.patient_id,
-        invoice_number: form.invoice_number,
         total_amount: parseFloat(form.total_amount),
         issue_date: form.issue_date,
         due_date: form.due_date,
@@ -238,15 +236,13 @@ function CreateModal({
               </select>
             </div>
 
-            {/* N° Facture */}
+            {/* N° Facture — auto-généré par le serveur */}
             <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">N° Facture *</label>
-              <input
-                type="text" value={form.invoice_number}
-                onChange={e => setForm({ ...form, invoice_number: e.target.value })}
-                className="w-full px-3 py-2.5 text-sm rounded-xl border border-white/[0.08] bg-white/[0.03] text-white focus:border-amber-500/50 focus:outline-none"
-                required
-              />
+              <label className="block text-xs font-semibold text-slate-400 mb-1.5">N° Facture</label>
+              <div className="w-full px-3 py-2.5 text-sm rounded-xl border border-white/[0.06] bg-white/[0.02] text-slate-500 italic flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                Auto-généré (FAC-{new Date().getFullYear()}-XXXX)
+              </div>
             </div>
 
             {/* Devise + Montant */}

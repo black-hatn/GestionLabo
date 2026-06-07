@@ -97,10 +97,13 @@ def create_patient(
             status_code=409, detail="Patient avec cet email existe déjà"
         )
     import uuid
+    from app.utils.numbering import next_patient_number
+
+    record_number = payload.record_number or next_patient_number(db)
 
     patient = Patient(
         id=str(uuid.uuid4()),
-        record_number=payload.record_number,
+        record_number=record_number,
         first_name=payload.first_name,
         last_name=payload.last_name,
         birth_date=payload.birth_date,
