@@ -79,6 +79,44 @@ def health():
     return {"status": "OK"}
 
 
+@app.get("/debug/test-db")
+def debug_test_db():
+    """Endpoint de diagnostic — teste la connexion DB et les tables. À retirer après debug."""
+    import traceback as tb_module
+    results = {}
+    from app.config.database import SessionLocal
+    from sqlalchemy import text, inspect
+    try:
+        with SessionLocal() as db:
+            # 1. Test connexion
+            db.execute(text("SELECT 1"))
+            results["connexion"] = "OK"
+            # 2. Liste des tables
+            inspector = inspect(engine)
+            results["tables"] = inspector.get_table_names()
+            # 3. Test COUNT factures
+            try:
+                count = db.execute(text("SELECT COUNT(*) FROM invoices")).scalar()
+                results["factures_count"] = count
+            except Exception as e:
+                results["factures_error"] = str(e)
+            # 4. Colonnes de invoices si la table existe
+            if "invoices" in results.get("tables", []):
+                results["invoices_columns"] = [
+                    c["name"] for c in inspector.get_columns("invoices")
+                ]
+            # 5. Test COUNT patients
+            try:
+                count = db.execute(text("SELECT COUNT(*) FROM patients")).scalar()
+                results["patients_count"] = count
+            except Exception as e:
+                results["patients_error"] = str(e)
+    except Exception as e:
+        results["connexion_error"] = str(e)
+        results["traceback"] = tb_module.format_exc()
+    return results
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
