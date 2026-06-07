@@ -14,11 +14,13 @@ async function proxy(req: NextRequest, context: { params: Promise<{ path: string
   const search = req.nextUrl.search;
   const targetUrl = `${BACKEND}/${pathStr}${search}`;
 
-  // Transmettre tous les headers sauf ceux qui cassent la requête sortante
+  // Transmettre tous les headers sauf ceux qui cassent la requête sortante.
+  // On retire aussi accept-encoding : Node fetch gère lui-même la décompression,
+  // inutile de négocier gzip avec le backend (évite le double-décodage côté browser).
+  const STRIP_REQ = ["host", "connection", "transfer-encoding", "accept-encoding"];
   const headers = new Headers();
   req.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (!["host", "connection", "transfer-encoding"].includes(lower)) {
+    if (!STRIP_REQ.includes(key.toLowerCase())) {
       headers.set(key, value);
     }
   });
@@ -34,11 +36,14 @@ async function proxy(req: NextRequest, context: { params: Promise<{ path: string
       duplex: "half",
     });
 
-    // Copier les headers de réponse
+    // Copier les headers de réponse.
+    // On retire content-encoding : Node fetch décompresse déjà le body (gzip/br),
+    // donc le body streamé est du texte brut. Si on transmet quand même le header,
+    // le navigateur tente une 2e décompression → ERR_CONTENT_DECODING_FAILED.
+    const STRIP_RES = ["transfer-encoding", "connection", "content-encoding"];
     const resHeaders = new Headers();
     upstream.headers.forEach((value, key) => {
-      const lower = key.toLowerCase();
-      if (!["transfer-encoding", "connection"].includes(lower)) {
+      if (!STRIP_RES.includes(key.toLowerCase())) {
         resHeaders.set(key, value);
       }
     });
