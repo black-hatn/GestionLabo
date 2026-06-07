@@ -8,7 +8,7 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 20000, // 20s — couvre le cold-start Render (~15s)
+  timeout: 70000, // 70s — couvre le cold-start Render free tier (~50s)
 });
 
 // Source de vérité unique : Zustand persist sous "novabio-auth"

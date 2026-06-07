@@ -198,7 +198,15 @@ function CreateModal({
       onCreate();
       onClose();
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Erreur lors de la création");
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((e: any) => e.msg ?? JSON.stringify(e)).join(" · ")
+        : typeof detail === "string"
+        ? detail
+        : err?.code === "ECONNABORTED"
+        ? "Le serveur met du temps à démarrer, réessayez dans 30 secondes"
+        : err?.message || "Erreur lors de la création";
+      toast.error(msg);
     } finally { setSaving(false); }
   };
 
