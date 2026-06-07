@@ -14,9 +14,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Crée les tables manquantes sans toucher aux tables existantes.
-# Nécessaire si la DB a été recréée (Render free tier expire après 90j).
-# Alembic gère les migrations incrémentales, mais ne crée pas les tables initiales.
 Base.metadata.create_all(bind=engine)
+
+# Migrations idempotentes (ADD COLUMN si absent, etc.)
+try:
+    import migrate as _migrate
+    _migrate.run()
+except Exception as _mig_exc:
+    logger.warning("[STARTUP] migrate.run() échoué (non bloquant): %s", _mig_exc)
 
 _settings = get_settings()
 
