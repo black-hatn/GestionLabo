@@ -148,7 +148,51 @@ def delete_patient(
     patient = db.get(Patient, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+
+    # Suppression en cascade manuelle (pas de CASCADE défini sur les FK)
+    from app.models.invoice import Invoice
+    from app.models.payment import Payment
+    from app.models.exam_request import ExamRequest
+    from app.models.result import Result
+
+    # 1. Paiements liés aux factures du patient
+    invoice_ids = db.execute(
+        select(Invoice.id).where(Invoice.patient_id == patient_id)
+    ).scalars().all()
+    if invoice_ids:
+        db.execute(
+            select(Payment).where(Payment.invoice_id.in_(invoice_ids))
+        )
+        for payment in db.execute(
+            select(Payment).where(Payment.invoice_id.in_(invoice_ids))
+        ).scalars().all():
+            db.delete(payment)
+
+    # 2. Factures du patient
+    for invoice in db.execute(
+        select(Invoice).where(Invoice.patient_id == patient_id)
+    ).scalars().all():
+        db.delete(invoice)
+
+    # 3. Résultats liés aux demandes d'examen du patient
+    exam_req_ids = db.execute(
+        select(ExamRequest.id).where(ExamRequest.patient_id == patient_id)
+    ).scalars().all()
+    if exam_req_ids:
+        for result in db.execute(
+            select(Result).where(Result.exam_request_id.in_(exam_req_ids))
+        ).scalars().all():
+            db.delete(result)
+
+    # 4. Demandes d'examen du patient
+    for exam_req in db.execute(
+        select(ExamRequest).where(ExamRequest.patient_id == patient_id)
+    ).scalars().all():
+        db.delete(exam_req)
+
+    # 5. Patient lui-même
     db.delete(patient)
     db.commit()
+
     AuditLog.log_action(db, current_user.id, "DELETE_PATIENT", "patient", patient_id)
-    return MessageResponse(message="Patient supprimé")
+    return MessageResponse(message="Patient et toutes ses données supprimés")
