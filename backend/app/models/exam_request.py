@@ -1,10 +1,14 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config.database import Base
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class ExamRequestStatus(str, enum.Enum):
@@ -26,8 +30,8 @@ class ExamRequest(Base):
     )
     clinical_info: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sample_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    requested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
     )

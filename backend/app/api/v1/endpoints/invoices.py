@@ -92,10 +92,10 @@ def get_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get a specific invoice"""
+    """Récupère une facture spécifique"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
+        raise HTTPException(status_code=404, detail="Facture introuvable")
 
     if current_user.role not in [
         UserRole.ADMIN,
@@ -180,10 +180,10 @@ def update_invoice(
         require_roles(UserRole.ADMIN, UserRole.LAB_TECH, UserRole.RECEPTIONIST)
     ),
 ):
-    """Update an invoice"""
+    """Met à jour une facture"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
+        raise HTTPException(status_code=404, detail="Facture introuvable")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(invoice, field, value)
@@ -205,17 +205,19 @@ def mark_invoice_paid(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
-    """Mark an invoice as paid"""
+    """Marque une facture comme payée et synchronise le montant payé."""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
+        raise HTTPException(status_code=404, detail="Facture introuvable")
 
     invoice.status = InvoiceStatus.PAYEE
+    # Synchroniser paid_amount avec total_amount pour la cohérence des analytics
+    invoice.paid_amount = invoice.total_amount
     invoice.paid_date = date.today()
     db.commit()
 
     AuditLog.log_action(db, current_user.id, "MARK_INVOICE_PAID", "invoice", invoice_id)
-    return MessageResponse(message="Invoice marked as paid")
+    return MessageResponse(message="Facture marquée comme payée")
 
 
 @router.delete("/{invoice_id}", response_model=MessageResponse)
@@ -224,13 +226,13 @@ def delete_invoice(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.ADMIN)),
 ):
-    """Delete an invoice"""
+    """Supprime une facture"""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
-        raise HTTPException(status_code=404, detail="Invoice not found")
+        raise HTTPException(status_code=404, detail="Facture introuvable")
 
     db.delete(invoice)
     db.commit()
 
     AuditLog.log_action(db, current_user.id, "DELETE_INVOICE", "invoice", invoice_id)
-    return MessageResponse(message="Invoice deleted successfully")
+    return MessageResponse(message="Facture supprimée avec succès")

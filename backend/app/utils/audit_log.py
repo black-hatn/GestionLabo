@@ -3,7 +3,7 @@ AuditLog service — Persistance des logs d'audit en base de données.
 Signature unique : log_action(db, user_id, action, resource_type, ...).
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 
@@ -68,7 +68,7 @@ class AuditLog:
                 details=details or {},
                 status=status,
                 ip_address=ip_address,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
             db.add(entry)
             db.commit()

@@ -104,7 +104,7 @@ class AuthService {
 
     // ── Cookie de session pour le middleware Edge Next.js ──
     if (typeof document !== 'undefined') {
-      document.cookie = "novabio_session=1; path=/; max-age=86400; SameSite=Lax";
+      document.cookie = `novabio_session=${tokens.access_token}; path=/; max-age=86400; SameSite=Lax`;
     }
 
     return tokens;
@@ -159,6 +159,8 @@ class AuthService {
     if (typeof window !== 'undefined') {
       localStorage.setItem(this.TOKEN_KEY, tokens.access_token);
       localStorage.setItem(this.REFRESH_TOKEN_KEY, tokens.refresh_token);
+      // Mettre à jour le cookie de session avec le nouveau token
+      document.cookie = `novabio_session=${tokens.access_token}; path=/; max-age=86400; SameSite=Lax`;
     }
 
     return tokens;

@@ -95,13 +95,13 @@ def notify_patient(
     if hasattr(status_val, "value"):
         status_val = status_val.value
 
-    # CRITIQUE → email CRITIQUE, ANORMAL → email ANORMAL, NORMAL → pas d'email
+    # CRITIQUE → email CRITIQUE, ANORMAL → email ANORMAL, NORMAL/Autre → email TERMINE (disponible)
     if status_val == "CRITIQUE":
         email_status = "CRITIQUE"
     elif status_val == "ANORMAL":
         email_status = "ANORMAL"
     else:
-        return {"message": "Aucune notification requise pour un résultat normal"}
+        email_status = "TERMINE"
 
     sent = send_result_notification(
         patient_email=patient.email,

@@ -1,10 +1,14 @@
 import enum
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import DateTime, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config.database import Base
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class ResultStatus(str, enum.Enum):
@@ -25,8 +29,8 @@ class Result(Base):
     reference_value: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[ResultStatus] = mapped_column(Enum(ResultStatus), default=ResultStatus.NORMAL, nullable=False)
     notes: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    tested_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    tested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
     )

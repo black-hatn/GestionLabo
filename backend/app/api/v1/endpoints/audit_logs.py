@@ -32,7 +32,16 @@ def get_audit_logs(
         limit=limit,
         offset=offset,
     )
-    total = db.query(AuditLogModel).count()
+    # Compte filtré : applique les mêmes filtres que get_logs pour une pagination correcte
+    count_query = db.query(AuditLogModel)
+    if user_id:
+        count_query = count_query.filter(AuditLogModel.user_id == user_id)
+    if resource_type:
+        count_query = count_query.filter(AuditLogModel.resource_type == resource_type)
+    if action:
+        count_query = count_query.filter(AuditLogModel.action == action)
+    total = count_query.count()
+
     return {
         "items": [
             {

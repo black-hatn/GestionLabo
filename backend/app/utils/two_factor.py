@@ -1,29 +1,42 @@
+import logging
 import random
 import string
-import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy.orm import Session
 
 _logger = logging.getLogger(__name__)
 
+
 class TwoFactorService:
-    """Service pour gérer l'authentification à deux facteurs"""
-    
-    _cache = {}  # Simple cache pour les codes OTP
-    
+    """Service pour gérer l'authentification à deux facteurs.
+    Les codes OTP sont persistés en base de données pour résister aux redémarrages
+    et aux déploiements multi-workers.
+    """
+
     @staticmethod
     def generate_otp(length: int = 6) -> str:
-        """Génère un code OTP de 6 chiffres"""
-        return ''.join(random.choices(string.digits, k=length))
-    
+        """Génère un code OTP de 6 chiffres."""
+        return "".join(random.choices(string.digits, k=length))
+
     @staticmethod
-    def send_otp_email(email: str, otp: str) -> bool:
-        """Envoie le code OTP par email"""
+    def send_otp_email(email: str, otp: str, db: Session) -> bool:
+        """Envoie le code OTP par email et le persiste en base."""
+        from app.models.otp_token import OTPToken
         from app.utils.email_service import send_email
-        TwoFactorService._cache[email] = {
-            'otp': otp,
-            'expires_at': datetime.utcnow() + timedelta(minutes=10),
-            'attempts': 0
-        }
+
+        # Supprimer les anciens OTP pour cet email
+        db.query(OTPToken).filter(OTPToken.email == email).delete()
+
+        db.add(
+            OTPToken(
+                email=email,
+                code=otp,
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
+            )
+        )
+        db.commit()
+
         html = f"""
         <div style="font-family:sans-serif;padding:20px;">
           <h2>Code de vérification NovaBio Lab</h2>
@@ -35,30 +48,33 @@ class TwoFactorService:
         if not sent:
             _logger.debug("[2FA-FALLBACK] OTP généré pour %s (SMTP désactivé)", email)
         return True
-    
+
     @staticmethod
-    def verify_otp(email: str, otp: str) -> bool:
-        """Vérifie le code OTP"""
-        if email not in TwoFactorService._cache:
+    def verify_otp(email: str, otp: str, db: Session) -> bool:
+        """Vérifie le code OTP depuis la base de données."""
+        from app.models.otp_token import OTPToken
+
+        token = (
+            db.query(OTPToken)
+            .filter(OTPToken.email == email, OTPToken.used == False)  # noqa: E712
+            .order_by(OTPToken.created_at.desc())
+            .first()
+        )
+
+        if not token:
             return False
-        
-        data = TwoFactorService._cache[email]
-        
+
         # Vérifier expiration
-        if datetime.utcnow() > data['expires_at']:
-            del TwoFactorService._cache[email]
+        if token.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+            db.delete(token)
+            db.commit()
             return False
-        
-        # Vérifier tentatives
-        if data['attempts'] >= 3:
-            del TwoFactorService._cache[email]
-            return False
-        
+
         # Vérifier le code
-        if data['otp'] != otp:
-            data['attempts'] += 1
+        if token.code != otp:
             return False
-        
-        # Code valide, supprimer du cache
-        del TwoFactorService._cache[email]
+
+        # Code valide : marquer comme utilisé
+        token.used = True
+        db.commit()
         return True

@@ -3,7 +3,12 @@
  * Le SuperAdmin a accès à TOUT et peut tout modifier/supprimer
  */
 
-export type UserRole = "ADMIN" | "RECEPTIONIST" | "COLLECTOR" | "LAB_TECH" | "DOCTOR";
+export type UserRole =
+  | "ADMIN"
+  | "RECEPTIONIST"
+  | "COLLECTOR"
+  | "LAB_TECH"
+  | "DOCTOR";
 
 interface Permission {
   read: boolean;
@@ -92,11 +97,11 @@ const COLLECTOR_PERMISSIONS: RolePermissions = {
 };
 
 const PERMISSIONS_MAP: Record<UserRole, RolePermissions> = {
-  ADMIN:        ADMIN_PERMISSIONS,
+  ADMIN: ADMIN_PERMISSIONS,
   RECEPTIONIST: RECEPTIONIST_PERMISSIONS,
-  COLLECTOR:    COLLECTOR_PERMISSIONS,
-  LAB_TECH:     LAB_TECH_PERMISSIONS,
-  DOCTOR:       DOCTOR_PERMISSIONS,
+  COLLECTOR: COLLECTOR_PERMISSIONS,
+  LAB_TECH: LAB_TECH_PERMISSIONS,
+  DOCTOR: DOCTOR_PERMISSIONS,
 };
 
 const NO_ACCESS: RolePermissions = {
@@ -115,7 +120,11 @@ export function getPermissions(role: UserRole): RolePermissions {
   return PERMISSIONS_MAP[role] ?? NO_ACCESS;
 }
 
-export function canAccess(role: UserRole, resource: keyof RolePermissions, action: keyof Permission): boolean {
+export function canAccess(
+  role: UserRole,
+  resource: keyof RolePermissions,
+  action: keyof Permission,
+): boolean {
   const permissions = getPermissions(role);
   const resourcePermissions = permissions[resource];
   return resourcePermissions?.[action] ?? false;
@@ -125,17 +134,16 @@ export function isAdmin(role: UserRole): boolean {
   return role === "ADMIN";
 }
 
-export function isSuperAdmin(role: UserRole): boolean {
-  return role === "ADMIN";
-}
+/** @deprecated Utiliser `isAdmin` à la place — identique en termes de droits. */
+export const isSuperAdmin = isAdmin;
 
 export function getRoleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
-    ADMIN:        "🔐 Administrateur",
+    ADMIN: "🔐 Administrateur",
     RECEPTIONIST: "🗂️ Réceptionniste",
-    COLLECTOR:    "🩸 Préleveur",
-    LAB_TECH:     "🧪 Technicien Labo",
-    DOCTOR:       "👨‍⚕️ Médecin",
+    COLLECTOR: "🩸 Préleveur",
+    LAB_TECH: "🧪 Technicien Labo",
+    DOCTOR: "👨‍⚕️ Médecin",
   };
   return labels[role] || role;
 }

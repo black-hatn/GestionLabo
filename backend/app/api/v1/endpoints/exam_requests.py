@@ -163,6 +163,17 @@ def delete_exam_request(
     item = db.get(ExamRequest, request_id)
     if not item:
         raise HTTPException(status_code=404, detail="Demande non trouvée")
+
+    # Supprimer le résultat lié avant la demande (contrainte FK)
+    from app.models.result import Result
+    from sqlalchemy import select as _select
+    linked_result = db.execute(
+        _select(Result).where(Result.exam_request_id == request_id)
+    ).scalar_one_or_none()
+    if linked_result:
+        db.delete(linked_result)
+        db.flush()
+
     db.delete(item)
     db.commit()
     return {"message": "Demande supprimée"}

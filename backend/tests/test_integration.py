@@ -99,7 +99,7 @@ def test_invoice_and_payment_flow(client, db):
         headers=headers,
     )
     assert mark_paid.status_code == 200
-    assert mark_paid.json()["message"] == "Invoice marked as paid"
+    assert mark_paid.json()["message"] == "Facture marquée comme payée"
 
     # Verify status is now PAYEE (French) and paid_date is set
     get_invoice = client.get(f"/api/v1/factures/{invoice_id}", headers=headers)

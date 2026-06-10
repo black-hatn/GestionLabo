@@ -71,7 +71,7 @@ def get_user(
     """Get a specific user - ADMIN only"""
     user = db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
     return user
 
 
@@ -114,7 +114,7 @@ def update_user(
     """Update a user - ADMIN only"""
     user = db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     if payload.first_name is not None:
         user.first_name = payload.first_name
@@ -150,13 +150,13 @@ def delete_user(
 
     user = db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     db.delete(user)
     db.commit()
 
     AuditLog.log_action(db, current_user.id, "DELETE_USER", "user", user_id, details={"email": user.email})
-    return MessageResponse(message="User deleted successfully")
+    return MessageResponse(message="Utilisateur supprimé avec succès")
 
 
 @router.patch("/{user_id}/toggle-active", response_model=UserRead)
@@ -171,7 +171,7 @@ def toggle_user_active(
 
     user = db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable")
 
     user.is_active = not user.is_active
     db.commit()

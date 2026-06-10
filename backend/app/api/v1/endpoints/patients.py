@@ -1,9 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, or_, func
 from sqlalchemy.orm import Session
+import uuid
 
 from app.config.database import get_db
 from app.models.patient import Patient
+from app.models.invoice import Invoice
+from app.models.payment import Payment
+from app.models.exam_request import ExamRequest
+from app.models.result import Result
 from app.schemas.domain import (
     PatientCreate,
     PatientUpdate,
@@ -14,6 +19,7 @@ from app.schemas.common import MessageResponse
 from app.api.deps import require_roles
 from app.models.user import User, UserRole
 from app.utils.audit_log import AuditLog
+from app.utils.numbering import next_patient_number
 
 router = APIRouter()
 
@@ -80,7 +86,7 @@ def get_patient(
 ):
     patient = db.get(Patient, patient_id)
     if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=404, detail="Patient introuvable")
     AuditLog.log_action(db, current_user.id, "GET_PATIENT", "patient", patient_id)
     return patient
 
@@ -96,9 +102,6 @@ def create_patient(
         raise HTTPException(
             status_code=409, detail="Patient avec cet email existe déjà"
         )
-    import uuid
-    from app.utils.numbering import next_patient_number
-
     record_number = payload.record_number or next_patient_number(db)
 
     patient = Patient(
@@ -130,7 +133,7 @@ def update_patient(
 ):
     patient = db.get(Patient, patient_id)
     if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=404, detail="Patient introuvable")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(patient, field, value)
     db.commit()
@@ -147,13 +150,9 @@ def delete_patient(
 ):
     patient = db.get(Patient, patient_id)
     if not patient:
-        raise HTTPException(status_code=404, detail="Patient not found")
+        raise HTTPException(status_code=404, detail="Patient introuvable")
 
     # Suppression en cascade manuelle (pas de CASCADE défini sur les FK)
-    from app.models.invoice import Invoice
-    from app.models.payment import Payment
-    from app.models.exam_request import ExamRequest
-    from app.models.result import Result
 
     # 1. Paiements liés aux factures du patient
     invoice_ids = db.execute(

@@ -20,7 +20,10 @@ interface AuthUser {
 interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
-  login: (token: string, userData: Partial<AuthUser> & { sub?: string; role?: string }) => void;
+  login: (
+    token: string,
+    userData: Partial<AuthUser> & { sub?: string; role?: string },
+  ) => void;
   logout: () => void;
 }
 
@@ -31,6 +34,15 @@ export const useAuthStore = create<AuthState>()(
       user: null,
 
       login: (token, userData) => {
+        const role = userData?.role as UserRole | undefined;
+        if (!role) {
+          // Rôle absent : on n'authentifie pas l'utilisateur pour éviter
+          // une élévation de droits silencieuse par valeur par défaut.
+          console.error(
+            "[auth-store] Rôle manquant dans le profil utilisateur — connexion refusée",
+          );
+          return;
+        }
         set({
           accessToken: token,
           user: {
@@ -38,7 +50,7 @@ export const useAuthStore = create<AuthState>()(
             email: userData?.email || "",
             first_name: userData?.first_name,
             last_name: userData?.last_name,
-            role: (userData?.role as UserRole) || "RECEPTIONIST",
+            role,
             is_active: userData?.is_active !== false,
           },
         });
@@ -54,6 +66,6 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "novabio-auth",
       storage: createJSONStorage(() => localStorage),
-    }
-  )
+    },
+  ),
 );

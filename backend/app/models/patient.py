@@ -1,10 +1,14 @@
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from sqlalchemy import Date, DateTime, Enum, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config.database import Base
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class PatientSex(str, enum.Enum):
@@ -21,13 +25,14 @@ class Patient(Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False)
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     sex: Mapped[PatientSex] = mapped_column(Enum(PatientSex), nullable=False)
-    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    # unique=True au niveau DB pour éviter les race conditions à l'insertion simultanée
+    email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     phone: Mapped[str] = mapped_column(String(30), nullable=False)
     city: Mapped[str] = mapped_column(String(120), nullable=False)
     address: Mapped[str] = mapped_column(String(255), nullable=True)
     insurance_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=_now, onupdate=_now, nullable=False
     )

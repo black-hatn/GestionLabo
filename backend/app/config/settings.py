@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,22 +10,28 @@ class Settings(BaseSettings):
 
     APP_NAME: str = "Laboratoire Examens API"
     API_PREFIX: str = "/api/v1"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
-    SECRET_KEY: str = Field(...)  # OBLIGATOIRE — définir dans .env, aucune valeur par défaut
+    SECRET_KEY: str = Field(
+        ...
+    )  # OBLIGATOIRE — définir dans .env, aucune valeur par défaut
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/laboratoire_examens"
+    DATABASE_URL: str = (
+        "postgresql+psycopg://postgres:postgres@localhost:5432/laboratoire_examens"
+    )
     DATABASE_URL_SQLITE: str = "sqlite:///./laboratoire_examens.db"
     USE_SQLITE_DEV: bool = True
 
-    CORS_ORIGINS: list[str] = Field(default_factory=lambda: [
-        "http://localhost:3000",
-        "https://novabio-labo-black-hatns-projects.vercel.app",
-        "https://novabio-labo.vercel.app",
-    ])
+    CORS_ORIGINS: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "https://novabio-labo-black-hatns-projects.vercel.app",
+            "https://novabio-labo.vercel.app",
+        ]
+    )
 
     # ATTENTION : changer ces credentials par défaut avant tout déploiement en production
     ADMIN_EMAIL: str = Field(default="admin@novabiolog.lab")

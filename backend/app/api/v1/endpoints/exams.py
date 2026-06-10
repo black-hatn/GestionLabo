@@ -52,7 +52,7 @@ def get_exam(
     """Get a specific exam"""
     exam = db.get(Exam, exam_id)
     if not exam:
-        raise HTTPException(status_code=404, detail="Exam not found")
+        raise HTTPException(status_code=404, detail="Examen introuvable")
 
     AuditLog.log_action(db, current_user.id, "GET_EXAM", "exam", exam_id)
     return exam
@@ -95,7 +95,7 @@ def update_exam(
     """Update an exam"""
     exam = db.get(Exam, exam_id)
     if not exam:
-        raise HTTPException(status_code=404, detail="Exam not found")
+        raise HTTPException(status_code=404, detail="Examen introuvable")
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(exam, field, value)
@@ -116,13 +116,13 @@ def delete_exam(
     """Delete an exam"""
     exam = db.get(Exam, exam_id)
     if not exam:
-        raise HTTPException(status_code=404, detail="Exam not found")
+        raise HTTPException(status_code=404, detail="Examen introuvable")
 
     db.delete(exam)
     db.commit()
 
     AuditLog.log_action(db, current_user.id, "DELETE_EXAM", "exam", exam_id)
-    return MessageResponse(message="Exam deleted successfully")
+    return MessageResponse(message="Examen supprimé avec succès")
 
 
 # ── Examens standards de laboratoire ──────────────────────────────────────

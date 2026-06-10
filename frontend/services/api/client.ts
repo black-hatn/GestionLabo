@@ -39,6 +39,9 @@ async function syncTokenToZustand(newToken: string): Promise<void> {
     if (state.user) {
       useAuthStore.getState().login(newToken, state.user);
     }
+    if (typeof document !== 'undefined') {
+      document.cookie = `novabio_session=${newToken}; path=/; max-age=86400; SameSite=Lax`;
+    }
   } catch { /* ignore */ }
 }
 

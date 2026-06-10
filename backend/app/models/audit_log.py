@@ -3,11 +3,15 @@ Modèle AuditLog — Trace chaque action sensible effectuée sur la plateforme.
 Obligation légale pour les systèmes de santé (RGPD, HIPAA, HL7).
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import DateTime, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.config.database import Base
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class AuditLog(Base):
@@ -40,5 +44,5 @@ class AuditLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
 
     timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False, index=True
+        DateTime(timezone=True), default=_now, nullable=False, index=True
     )

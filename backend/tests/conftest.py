@@ -1,5 +1,6 @@
 import os
 import sys
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,10 +11,11 @@ ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
-from app.main import app
 from app.config.database import Base, get_db
 from app.config.security import hash_password
+from app.main import app
 from app.models.user import User, UserRole
+from app.utils.rate_limit import rate_limiter
 
 # Use an in-memory SQLite database for fast, isolated testing
 DATABASE_URL = "sqlite:///:memory:"
@@ -24,6 +26,7 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 @pytest.fixture(name="db")
 def db_fixture():
@@ -49,6 +52,15 @@ def db_fixture():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Vide le rate limiter entre chaque test pour éviter les faux 429."""
+    rate_limiter.requests.clear()
+    yield
+    rate_limiter.requests.clear()
+
+
 @pytest.fixture(name="client")
 def client_fixture(db):
     def override_get_db():
@@ -56,7 +68,7 @@ def client_fixture(db):
             yield db
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client

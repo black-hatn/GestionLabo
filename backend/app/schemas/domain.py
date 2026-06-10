@@ -133,6 +133,7 @@ class ExamCreate(BaseModel):
     description: str | None = None
     reference_values: dict = Field(default_factory=dict)
     unit: str | None = None
+    price: Decimal = Field(default=Decimal("0.00"), ge=0, description="Prix de l'examen en XOF")
 
 
 class ExamUpdate(BaseModel):
@@ -140,6 +141,7 @@ class ExamUpdate(BaseModel):
     description: str | None = None
     reference_values: dict | None = None
     unit: str | None = None
+    price: Decimal | None = None
     is_active: bool | None = None
 
 
@@ -149,6 +151,7 @@ class ExamRead(ORMModel):
     description: str | None
     reference_values: dict
     unit: str | None
+    price: Decimal
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -163,7 +166,10 @@ class ExamRequestCreate(BaseModel):
 
 
 class ExamRequestUpdate(BaseModel):
-    status: ExamRequestStatus
+    """Mise à jour d'une demande d'examen. Tous les champs sont optionnels."""
+    status: ExamRequestStatus | None = None
+    clinical_info: str | None = None
+    sample_type: str | None = None
 
 
 class ExamRequestRead(ORMModel):
